@@ -676,6 +676,7 @@ type OpensearchOpensearchClusterResourceCrud struct {
 	Client                 *oci_opensearch.OpensearchClusterClient
 	Res                    *oci_opensearch.OpensearchCluster
 	DisableNotFoundRetries bool
+	RetryPolicyOptionals   []interface{}
 }
 
 func (s *OpensearchOpensearchClusterResourceCrud) ID() string {
@@ -1033,7 +1034,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) Create() error {
 		request.VcnId = &tmp
 	}
 
-	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch")
+	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch", s.RetryPolicyOptionals...)
 
 	response, err := s.Client.CreateOpensearchCluster(context.Background(), request)
 	if err != nil {
@@ -1848,7 +1849,10 @@ func (s *OpensearchOpensearchClusterResourceCrud) UpgradeOpenSearchCluster() err
 	return s.getOpensearchClusterFromWorkRequest(workId, tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch"), oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate))
 }
 func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterHorizontal() error {
-	tfresource.ShortRetryTime = tfresource.LongRetryTime * 5
+	s.RetryPolicyOptionals = []interface{}{tfresource.GetShortRetryDurationFunction(tfresource.LongRetryTime * 5)}
+	defer func() {
+		s.RetryPolicyOptionals = nil
+	}()
 	request := oci_opensearch.ResizeOpensearchClusterHorizontalRequest{}
 
 	if coordinatorNodeCount, ok := s.D.GetOkExists("coordinator_node_count"); ok {
@@ -1884,7 +1888,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterHorizon
 		request.SearchNodeCount = &tmp
 	}
 
-	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch")
+	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch", s.RetryPolicyOptionals...)
 
 	response, err := s.Client.ResizeOpensearchClusterHorizontal(context.Background(), request)
 	if err != nil {
@@ -1896,7 +1900,10 @@ func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterHorizon
 }
 
 func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterVertical() error {
-	tfresource.ShortRetryTime = tfresource.LongRetryTime * 5
+	s.RetryPolicyOptionals = []interface{}{tfresource.GetShortRetryDurationFunction(tfresource.LongRetryTime * 5)}
+	defer func() {
+		s.RetryPolicyOptionals = nil
+	}()
 	request := oci_opensearch.ResizeOpensearchClusterVerticalRequest{}
 
 	if coordinatorNodeHostMemoryGB, ok := s.D.GetOkExists("coordinator_node_host_memory_gb"); ok {
@@ -2007,7 +2014,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterVertica
 		request.SearchNodeStorageGB = &tmp
 	}
 
-	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch")
+	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch", s.RetryPolicyOptionals...)
 
 	response, err := s.Client.ResizeOpensearchClusterVertical(context.Background(), request)
 	if err != nil {

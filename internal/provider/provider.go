@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	tf_core "github.com/oracle/terraform-provider-oci/internal/service/core"
@@ -41,11 +42,10 @@ import (
 
 var descriptions map[string]string
 var ApiKeyConfigAttributes = [5]string{globalvar.UserOcidAttrName, globalvar.FingerprintAttrName, globalvar.PrivateKeyAttrName, globalvar.PrivateKeyPathAttrName, globalvar.PrivateKeyPasswordAttrName}
-var ociProvider *schema.Provider
-
 var TerraformCLIVersion = globalvar.UnknownTerraformCLIVersion
 var schemaMultiEnvDefaultFuncVar = schema.MultiEnvDefaultFunc
 var AvoidWaitingForDeleteTarget bool
+var providerAliasesOnce sync.Once
 
 // creating an interface to aid in unit tests
 type schemaResourceData interface {
@@ -123,13 +123,26 @@ func init() {
 }
 
 func Provider() *schema.Provider {
-	ociProvider = &schema.Provider{
+	return newSDKv2Provider(false)
+}
+
+// NewSDKv2ProviderForInProcess returns a fresh SDKv2 provider whose
+// configuration path does not mutate Terraform Provider OCI process globals.
+// Consumers must use default values for options backed by process-global state.
+func NewSDKv2ProviderForInProcess() *schema.Provider {
+	return newSDKv2Provider(true)
+}
+
+func newSDKv2Provider(inProcess bool) *schema.Provider {
+	p := &schema.Provider{
 		DataSourcesMap: DataSourcesMap(),
 		Schema:         SchemaMap(),
 		ResourcesMap:   ResourcesMap(),
-		ConfigureFunc:  ProviderConfig,
 	}
-	return ociProvider
+	p.ConfigureFunc = func(d *schema.ResourceData) (any, error) {
+		return providerConfig(d, p.TerraformVersion, inProcess)
+	}
+	return p
 }
 
 func SchemaMap() map[string]*schema.Schema {
@@ -300,59 +313,76 @@ func SchemaMap() map[string]*schema.Schema {
 // This returns a map of all data sources to register with Terraform
 // The OciDatasources map is populated by each datasource's init function being invoked before it gets here
 func DataSourcesMap() map[string]*schema.Resource {
-	// Register some aliases of registered datasources. These are registered for convenience and legacy reasons.
-	if oci_common.CheckForEnabledServices(globalvar.CoreService) {
-		tf_resource.RegisterDatasource("oci_core_listing_resource_version", tf_core.CoreAppCatalogListingResourceVersionDataSource())
-		tf_resource.RegisterDatasource("oci_core_listing_resource_versions", tf_core.CoreAppCatalogListingResourceVersionsDataSource())
-		tf_resource.RegisterDatasource("oci_core_shape", tf_core.CoreShapesDataSource())
-		tf_resource.RegisterDatasource("oci_core_virtual_networks", tf_core.CoreVcnsDataSource())
-	}
-	if oci_common.CheckForEnabledServices(globalvar.LoadBalancerService) {
-		tf_resource.RegisterDatasource("oci_load_balancers", tf_load_balancer.LoadBalancerLoadBalancersDataSource())
-		tf_resource.RegisterDatasource("oci_load_balancer_backendsets", tf_load_balancer.LoadBalancerBackendSetsDataSource())
-	}
+	registerProviderAliases()
 	return globalvar.OciDatasources
 }
 
 // This returns a map of all resources to register with Terraform
 // The OciResource map is populated by each resource's init function being invoked before it gets here
 func ResourcesMap() map[string]*schema.Resource {
-	// Register some aliases of registered resources. These are registered for convenience and legacy reasons.
-	if oci_common.CheckForEnabledServices(globalvar.CoreService) {
-		tf_resource.RegisterResource("oci_core_virtual_network", tf_core.CoreVcnResource())
-	}
-	if oci_common.CheckForEnabledServices(globalvar.LoadBalancerService) {
-		tf_resource.RegisterResource("oci_load_balancer", tf_load_balancer.LoadBalancerLoadBalancerResource())
-		tf_resource.RegisterResource("oci_load_balancer_backendset", tf_load_balancer.LoadBalancerBackendSetResource())
-	}
+	registerProviderAliases()
 	return globalvar.OciResources
 }
 
+func registerProviderAliases() {
+	providerAliasesOnce.Do(func() {
+		// Register aliases once. Provider construction may be concurrent when
+		// the provider is embedded in another Go process.
+		if oci_common.CheckForEnabledServices(globalvar.CoreService) {
+			tf_resource.RegisterDatasource("oci_core_listing_resource_version", tf_core.CoreAppCatalogListingResourceVersionDataSource())
+			tf_resource.RegisterDatasource("oci_core_listing_resource_versions", tf_core.CoreAppCatalogListingResourceVersionsDataSource())
+			tf_resource.RegisterDatasource("oci_core_shape", tf_core.CoreShapesDataSource())
+			tf_resource.RegisterDatasource("oci_core_virtual_networks", tf_core.CoreVcnsDataSource())
+			tf_resource.RegisterResource("oci_core_virtual_network", tf_core.CoreVcnResource())
+		}
+		if oci_common.CheckForEnabledServices(globalvar.LoadBalancerService) {
+			tf_resource.RegisterDatasource("oci_load_balancers", tf_load_balancer.LoadBalancerLoadBalancersDataSource())
+			tf_resource.RegisterDatasource("oci_load_balancer_backendsets", tf_load_balancer.LoadBalancerBackendSetsDataSource())
+			tf_resource.RegisterResource("oci_load_balancer", tf_load_balancer.LoadBalancerLoadBalancerResource())
+			tf_resource.RegisterResource("oci_load_balancer_backendset", tf_load_balancer.LoadBalancerBackendSetResource())
+		}
+	})
+}
+
 func ProviderConfig(d *schema.ResourceData) (interface{}, error) {
-	tf_resource.DefinedTagsToSuppress = IgnoreDefinedTags(d)
-	tf_resource.RealmSpecificServiceEndpointTemplateEnabled = realmSpecificServiceEndpointTemplateEnabled(d)
-	tf_resource.DualStackEndpointTemplateEnabled = dualStackEndpointEnabled(d)
+	return providerConfig(d, TerraformCLIVersion, false)
+}
+
+func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess bool) (any, error) {
+	if inProcess {
+		if err := validateInProcessProviderConfig(d); err != nil {
+			return nil, err
+		}
+	} else {
+		tf_resource.DefinedTagsToSuppress = IgnoreDefinedTags(d)
+		tf_resource.RealmSpecificServiceEndpointTemplateEnabled = realmSpecificServiceEndpointTemplateEnabled(d)
+		tf_resource.DualStackEndpointTemplateEnabled = dualStackEndpointEnabled(d)
+	}
 	clients := &tf_client.OracleClients{
 		SdkClientMap:  make(map[string]interface{}, len(tf_client.OracleClientRegistrationsVar.RegisteredClients)),
 		Configuration: make(map[string]string),
 	}
 
-	if d.Get(globalvar.DisableAutoRetriesAttrName).(bool) {
+	if !inProcess && d.Get(globalvar.DisableAutoRetriesAttrName).(bool) {
 		tf_resource.ShortRetryTime = 0
 		tf_resource.LongRetryTime = 0
-	} else if retryDurationSeconds, exists := d.GetOkExists(globalvar.RetryDurationSecondsAttrName); exists {
-		val := time.Duration(retryDurationSeconds.(int)) * time.Second
-		if retryDurationSeconds.(int) < 0 {
-			// Retry for maximum amount of time, if a negative value was specified
-			val = time.Duration(globalvar.MaxInt64)
+	} else if !inProcess {
+		if retryDurationSeconds, exists := d.GetOkExists(globalvar.RetryDurationSecondsAttrName); exists {
+			val := time.Duration(retryDurationSeconds.(int)) * time.Second
+			if retryDurationSeconds.(int) < 0 {
+				// Retry for maximum amount of time, if a negative value was specified
+				val = time.Duration(globalvar.MaxInt64)
+			}
+			tf_resource.ConfiguredRetryDuration = &val
 		}
-		tf_resource.ConfiguredRetryDuration = &val
 	}
 
-	if retriesConfigFile, exists := d.GetOkExists(globalvar.RetriesConfigFile); exists {
-		err := tf_resource.SetRetriesConfig(retriesConfigFile.(string))
-		if err != nil {
-			return nil, err
+	if !inProcess {
+		if retriesConfigFile, exists := d.GetOkExists(globalvar.RetriesConfigFile); exists {
+			err := tf_resource.SetRetriesConfig(retriesConfigFile.(string))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -363,20 +393,47 @@ func ProviderConfig(d *schema.ResourceData) (interface{}, error) {
 
 	httpClient := BuildHttpClient()
 
-	// beware: global variable `configureClient` set here--used elsewhere outside this execution path
-	tf_client.ConfigureClientVar, err = BuildConfigureClientFn(sdkConfigProvider, httpClient)
+	configureClient, err := buildConfigureClientFn(sdkConfigProvider, httpClient, terraformVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	err = tf_client.CreateSDKClients(clients, sdkConfigProvider, tf_client.ConfigureClientVar)
+	err = tf_client.CreateSDKClients(clients, sdkConfigProvider, configureClient)
 	if err != nil {
 		return nil, err
 	}
 
-	AvoidWaitingForDeleteTarget, _ = strconv.ParseBool(utils.GetEnvSettingWithDefault("avoid_waiting_for_delete_target", "false"))
+	if !inProcess {
+		AvoidWaitingForDeleteTarget, _ = strconv.ParseBool(utils.GetEnvSettingWithDefault("avoid_waiting_for_delete_target", "false"))
+	}
 
 	return clients, nil
+}
+
+func validateInProcessProviderConfig(d *schema.ResourceData) error {
+	unsupported := make([]string, 0, 6)
+	if len(IgnoreDefinedTags(d)) != 0 {
+		unsupported = append(unsupported, globalvar.DefinedTagsToIgnore)
+	}
+	if realmSpecificServiceEndpointTemplateEnabled(d) != "" {
+		unsupported = append(unsupported, globalvar.RealmSpecificServiceEndpointTemplateEnabled)
+	}
+	if dualStackEndpointEnabled(d) != "" {
+		unsupported = append(unsupported, globalvar.DualStackEndpointEnabled)
+	}
+	if d.Get(globalvar.DisableAutoRetriesAttrName).(bool) {
+		unsupported = append(unsupported, globalvar.DisableAutoRetriesAttrName)
+	}
+	if value, exists := d.GetOkExists(globalvar.RetryDurationSecondsAttrName); exists && value.(int) != 0 {
+		unsupported = append(unsupported, globalvar.RetryDurationSecondsAttrName)
+	}
+	if value, exists := d.GetOkExists(globalvar.RetriesConfigFile); exists && value.(string) != "" {
+		unsupported = append(unsupported, globalvar.RetriesConfigFile)
+	}
+	if len(unsupported) != 0 {
+		return fmt.Errorf("provider-global option(s) are not supported for in-process use: %s", strings.Join(unsupported, ", "))
+	}
+	return nil
 }
 
 func GetSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClients) (oci_common.ConfigurationProvider, error) {
@@ -719,12 +776,12 @@ func UserAgentFromEnv() string {
 }
 
 func BuildConfigureClientFn(configProvider oci_common.ConfigurationProvider, httpClient *http.Client) (tf_client.ConfigureClient, error) {
+	return buildConfigureClientFn(configProvider, httpClient, TerraformCLIVersion)
+}
 
-	if ociProvider != nil && len(ociProvider.TerraformVersion) > 0 {
-		TerraformCLIVersion = ociProvider.TerraformVersion
-	}
+func buildConfigureClientFn(configProvider oci_common.ConfigurationProvider, httpClient *http.Client, terraformVersion string) (tf_client.ConfigureClient, error) {
 	userAgentProviderName := UserAgentFromEnv()
-	userAgent := fmt.Sprintf(globalvar.UserAgentFormatter, oci_common.Version(), runtime.Version(), runtime.GOOS, runtime.GOARCH, sdkMeta.SDKVersionString(), TerraformCLIVersion, userAgentProviderName, globalvar.Version)
+	userAgent := fmt.Sprintf(globalvar.UserAgentFormatter, oci_common.Version(), runtime.Version(), runtime.GOOS, runtime.GOARCH, sdkMeta.SDKVersionString(), terraformVersion, userAgentProviderName, globalvar.Version)
 
 	useOboToken, err := strconv.ParseBool(utils.GetEnvSettingWithDefault("use_obo_token", "false"))
 	if err != nil {

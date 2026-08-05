@@ -15,8 +15,6 @@ import (
 	"sync"
 	"time"
 
-	tf_client "github.com/oracle/terraform-provider-oci/internal/client"
-
 	"github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -422,7 +420,7 @@ func (s *ObjectStorageObjectResourceCrud) createSourceRegionClient(region string
 		if err != nil {
 			return fmt.Errorf("cannot Create client for the source region: %v", err)
 		}
-		err = tf_client.ConfigureClientVar(&sourceObjectStorageClient.BaseClient)
+		err = s.ConfigureClient(&sourceObjectStorageClient.BaseClient)
 		if err != nil {
 			return fmt.Errorf("cannot configure client for the source region: %v", err)
 		}
