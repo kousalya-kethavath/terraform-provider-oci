@@ -394,8 +394,6 @@ func getExportConfig(d *schema.ResourceData) (interface{}, error) {
 		client.UserAgent = userAgentString
 		return nil
 	}
-	// beware: global variable `configureClient` set here--used elsewhere outside this execution path
-	tf_client.ConfigureClientVar = configureClientWithUserAgent
 	err = createSDKClientsVar(clients, sdkConfigProvider, configureClientWithUserAgent)
 	if err != nil {
 		return nil, err

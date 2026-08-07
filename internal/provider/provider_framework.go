@@ -443,11 +443,6 @@ func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Preserve the existing Terraform CLI behavior until all delayed client
-	// construction paths are converted to instance-owned configuration.
-	if !p.inProcess {
-		tf_client.ConfigureClientVar = configureClient
-	}
 
 	err = tf_client.CreateSDKClients(clients, sdkConfigProvider, configureClient)
 	if err != nil {
