@@ -153,6 +153,7 @@ func createCoreVolumeGroupBackup(d *schema.ResourceData, m interface{}) error {
 	sync := &CoreVolumeGroupBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	// Issue logged with service team for `Create` not supporting non-default compartment_id
 	// Remove custom code after issue is fixed.
@@ -185,6 +186,7 @@ func readCoreVolumeGroupBackup(d *schema.ResourceData, m interface{}) error {
 	sync := &CoreVolumeGroupBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	return tfresource.ReadResource(sync)
 }
@@ -193,6 +195,7 @@ func updateCoreVolumeGroupBackup(d *schema.ResourceData, m interface{}) error {
 	sync := &CoreVolumeGroupBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	return tfresource.UpdateResource(d, sync)
 }
@@ -201,6 +204,7 @@ func deleteCoreVolumeGroupBackup(d *schema.ResourceData, m interface{}) error {
 	sync := &CoreVolumeGroupBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 	sync.DisableNotFoundRetries = true
 
 	return tfresource.DeleteResource(d, sync)
@@ -210,6 +214,7 @@ type CoreVolumeGroupBackupResourceCrud struct {
 	tfresource.BaseCrud
 	SourceRegionClient     *oci_core.BlockstorageClient
 	Client                 *oci_core.BlockstorageClient
+	ConfigureClient        client.ConfigureClient
 	Res                    *oci_core.VolumeGroupBackup
 	DisableNotFoundRetries bool
 }

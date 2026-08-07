@@ -246,6 +246,7 @@ func createObjectStorageObject(d *schema.ResourceData, m interface{}) error {
 	sync := &ObjectStorageObjectResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).ObjectStorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	return tfresource.CreateResource(d, sync)
 }
@@ -492,6 +493,7 @@ func readObjectStorageObject(d *schema.ResourceData, m interface{}) error {
 	}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).ObjectStorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	return tfresource.ReadResource(sync)
 }
@@ -500,6 +502,7 @@ func updateObjectStorageObject(d *schema.ResourceData, m interface{}) error {
 	sync := &ObjectStorageObjectResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).ObjectStorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	return tfresource.UpdateResource(d, sync)
 }
@@ -526,6 +529,7 @@ type ObjectStorageObject struct {
 type ObjectStorageObjectResourceCrud struct {
 	tfresource.BaseCrud
 	Client                 *oci_object_storage.ObjectStorageClient
+	ConfigureClient        client.ConfigureClient
 	SourceRegionClient     *oci_object_storage.ObjectStorageClient
 	Res                    *ObjectStorageObject
 	DisableNotFoundRetries bool
