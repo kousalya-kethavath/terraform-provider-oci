@@ -189,7 +189,7 @@ func createVolumeInRegion(clients *tf_client.OracleClients, region string) (stri
 	if err != nil {
 		return "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -198,7 +198,7 @@ func createVolumeInRegion(clients *tf_client.OracleClients, region string) (stri
 	if err != nil {
 		return "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&identityClient.BaseClient)
+	err = clients.ConfigureBaseClient(&identityClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -249,7 +249,7 @@ func createVolumeGroupInRegion(clients *tf_client.OracleClients, region string, 
 	if err != nil {
 		return "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -258,7 +258,7 @@ func createVolumeGroupInRegion(clients *tf_client.OracleClients, region string, 
 	if err != nil {
 		return "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&identityClient.BaseClient)
+	err = clients.ConfigureBaseClient(&identityClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -312,7 +312,7 @@ func createVolumeBackupInRegion(clients *tf_client.OracleClients, region string,
 	if err != nil {
 		return "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -350,7 +350,7 @@ func createVolumeGroupBackupInRegion(clients *tf_client.OracleClients, region st
 	if err != nil {
 		return "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -388,7 +388,7 @@ func deleteVolumeInRegion(clients *tf_client.OracleClients, region string, volum
 	if err != nil {
 		return fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -412,7 +412,7 @@ func deleteVolumeGroupInRegion(clients *tf_client.OracleClients, region string, 
 	if err != nil {
 		return fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -436,7 +436,7 @@ func deleteVolumeBackupInRegion(clients *tf_client.OracleClients, region string,
 	if err != nil {
 		return fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -460,7 +460,7 @@ func deleteVolumeGroupBackupInRegion(clients *tf_client.OracleClients, region st
 	if err != nil {
 		return fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -518,7 +518,7 @@ func createBootVolumeInRegion(clients *tf_client.OracleClients, region string) (
 	if err != nil {
 		return "", "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return "", "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -527,7 +527,7 @@ func createBootVolumeInRegion(clients *tf_client.OracleClients, region string) (
 	if err != nil {
 		return "", "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&identityClient.BaseClient)
+	err = clients.ConfigureBaseClient(&identityClient.BaseClient)
 	if err != nil {
 		return "", "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -638,7 +638,7 @@ func createBootVolumeBackupInRegion(clients *tf_client.OracleClients, region str
 	if err != nil {
 		return "", fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -676,7 +676,7 @@ func deleteBootVolumeInRegion(clients *tf_client.OracleClients, region string, b
 	if err != nil {
 		return fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -700,7 +700,7 @@ func deleteBootVolumeBackupInRegion(clients *tf_client.OracleClients, region str
 	if err != nil {
 		return fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&blockStorageClient.BaseClient)
+	err = clients.ConfigureBaseClient(&blockStorageClient.BaseClient)
 	if err != nil {
 		return fmt.Errorf("cannot configure client for the source region: %v", err)
 	}
@@ -724,7 +724,7 @@ func terminateInstanceInRegion(clients *tf_client.OracleClients, region string, 
 	if err != nil {
 		return fmt.Errorf("cannot Create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&computeClient.BaseClient)
+	err = clients.ConfigureBaseClient(&computeClient.BaseClient)
 	if err != nil {
 		return fmt.Errorf("cannot configure client for the source region: %v", err)
 	}

@@ -422,7 +422,8 @@ func (s *ObjectStorageObjectResourceCrud) createSourceRegionClient(region string
 		if err != nil {
 			return fmt.Errorf("cannot Create client for the source region: %v", err)
 		}
-		err = tf_client.ConfigureClientVar(&sourceObjectStorageClient.BaseClient)
+		tf_client.SetObjectStorageClientDefaults(&sourceObjectStorageClient)
+		err = s.ConfigureClient(&sourceObjectStorageClient.BaseClient)
 		if err != nil {
 			return fmt.Errorf("cannot configure client for the source region: %v", err)
 		}
