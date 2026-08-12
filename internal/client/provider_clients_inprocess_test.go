@@ -6,6 +6,7 @@ package client
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -13,6 +14,7 @@ import (
 
 	oci_common "github.com/oracle/oci-go-sdk/v65/common"
 	oci_functions "github.com/oracle/oci-go-sdk/v65/functions"
+	oci_identity "github.com/oracle/oci-go-sdk/v65/identity"
 	oci_identity_domains "github.com/oracle/oci-go-sdk/v65/identitydomains"
 	oci_kms "github.com/oracle/oci-go-sdk/v65/keymanagement"
 	oci_object_storage "github.com/oracle/oci-go-sdk/v65/objectstorage"
@@ -86,6 +88,71 @@ func TestOracleClientsConfigureBaseClientIsolation(t *testing.T) {
 func TestOracleClientsConfigureBaseClientRequiresCallback(t *testing.T) {
 	if err := (&OracleClients{}).ConfigureBaseClient(&oci_common.BaseClient{}); err == nil {
 		t.Fatal("ConfigureBaseClient returned nil without an instance callback")
+	}
+}
+
+func TestOracleClientsConstructSDKClientsLazily(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		t.Fatalf("generate private key: %v", err)
+	}
+	var configureCalls atomic.Int64
+	clients := &OracleClients{SdkClientMap: make(map[string]interface{})}
+	if err := CreateSDKClientsLazy(clients, endpointTestConfiguration{privateKey: privateKey}, func(*oci_common.BaseClient) error {
+		configureCalls.Add(1)
+		return nil
+	}); err != nil {
+		t.Fatalf("configure lazy clients: %v", err)
+	}
+	const clientName = "oci_identity.IdentityClient"
+	if _, ok := clients.SdkClientMap[clientName]; ok {
+		t.Fatal("Identity client was constructed before first use")
+	}
+	baselineCalls := configureCalls.Load()
+
+	const calls = 50
+	results := make([]*oci_identity.IdentityClient, calls)
+	var wg sync.WaitGroup
+	for i := range calls {
+		wg.Go(func() {
+			client, getErr := clients.GetClientWithError(clientName)
+			if getErr != nil {
+				t.Errorf("get lazy client: %v", getErr)
+				return
+			}
+			results[i] = client.(*oci_identity.IdentityClient)
+		})
+	}
+	wg.Wait()
+
+	for i, client := range results {
+		if client == nil {
+			t.Fatalf("lazy client result %d is nil", i)
+		}
+		if client != results[0] {
+			t.Fatalf("lazy client result %d differs from the cached client", i)
+		}
+	}
+	if got := configureCalls.Load() - baselineCalls; got != 1 {
+		t.Fatalf("lazy Identity client configure calls = %d, want 1", got)
+	}
+	if _, err := clients.GetClientWithError("oci_missing.Client"); err == nil {
+		t.Fatal("GetClientWithError accepted an unregistered client")
+	}
+}
+
+func TestOracleClientsPreserveEagerTerraformInitialization(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		t.Fatalf("generate private key: %v", err)
+	}
+	want := errors.New("configure client")
+	clients := &OracleClients{SdkClientMap: make(map[string]interface{})}
+	err = CreateSDKClients(clients, endpointTestConfiguration{privateKey: privateKey}, func(*oci_common.BaseClient) error {
+		return want
+	})
+	if !errors.Is(err, want) {
+		t.Fatalf("eager initialization error = %v, want %v", err, want)
 	}
 }
 
