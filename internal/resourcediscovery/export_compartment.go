@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"maps"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -179,8 +180,7 @@ func printResourceGraphResources(resourceGraphs map[string]tf_export.TerraformRe
 }
 
 func RunListExportableResourcesCommand() error {
-	tf_export.ResourcesMap = tf_provider.ResourcesMap()
-	tf_export.DatasourcesMap = tf_provider.DataSourcesMap()
+	refreshProviderSchemaMaps()
 
 	utils.Logln("List of Discoverable Oracle Cloud Infrastructure Resources")
 
@@ -248,8 +248,7 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 			status = StatusFail
 		}
 	}()
-	tf_export.ResourcesMap = tf_provider.ResourcesMap()
-	tf_export.DatasourcesMap = tf_provider.DataSourcesMap()
+	refreshProviderSchemaMaps()
 
 	if err := args.Validate(); err != nil {
 		return err, StatusFail
@@ -354,6 +353,22 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 		return error, status
 	}
 	return nil, StatusSuccess
+}
+
+// refreshProviderSchemaMaps rebuilds the provider's generated schemas while
+// preserving entries already registered by Resource Discovery. The v8.22.0
+// provider maps were shared, so callers could add discovery-only schemas before
+// invoking a command. Lazy schema construction returns fresh maps; copying the
+// existing entries preserves that behavior without making provider instances
+// share mutable schemas again.
+func refreshProviderSchemaMaps() {
+	resources := tf_provider.ResourcesMap()
+	maps.Copy(resources, tf_export.ResourcesMap)
+	tf_export.ResourcesMap = resources
+
+	datasources := tf_provider.DataSourcesMap()
+	maps.Copy(datasources, tf_export.DatasourcesMap)
+	tf_export.DatasourcesMap = datasources
 }
 
 func getListOfNotDiscoveredResources(ctx *tf_export.ResourceDiscoveryContext) (error, Status) {

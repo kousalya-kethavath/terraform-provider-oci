@@ -6,6 +6,6 @@ package zpr
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_zpr_configuration", ZprConfigurationResource())
-	tfresource.RegisterResource("oci_zpr_zpr_policy", ZprZprPolicyResource())
+	tfresource.RegisterResource("oci_zpr_configuration", ZprConfigurationResource)
+	tfresource.RegisterResource("oci_zpr_zpr_policy", ZprZprPolicyResource)
 }

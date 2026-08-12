@@ -6,13 +6,13 @@ package file_storage
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_file_storage_export", FileStorageExportResource())
-	tfresource.RegisterResource("oci_file_storage_export_set", FileStorageExportSetResource())
-	tfresource.RegisterResource("oci_file_storage_file_system", FileStorageFileSystemResource())
-	tfresource.RegisterResource("oci_file_storage_file_system_quota_rule", FileStorageFileSystemQuotaRuleResource())
-	tfresource.RegisterResource("oci_file_storage_filesystem_snapshot_policy", FileStorageFilesystemSnapshotPolicyResource())
-	tfresource.RegisterResource("oci_file_storage_mount_target", FileStorageMountTargetResource())
-	tfresource.RegisterResource("oci_file_storage_replication", FileStorageReplicationResource())
-	tfresource.RegisterResource("oci_file_storage_outbound_connector", FileStorageOutboundConnectorResource())
-	tfresource.RegisterResource("oci_file_storage_snapshot", FileStorageSnapshotResource())
+	tfresource.RegisterResource("oci_file_storage_export", FileStorageExportResource)
+	tfresource.RegisterResource("oci_file_storage_export_set", FileStorageExportSetResource)
+	tfresource.RegisterResource("oci_file_storage_file_system", FileStorageFileSystemResource)
+	tfresource.RegisterResource("oci_file_storage_file_system_quota_rule", FileStorageFileSystemQuotaRuleResource)
+	tfresource.RegisterResource("oci_file_storage_filesystem_snapshot_policy", FileStorageFilesystemSnapshotPolicyResource)
+	tfresource.RegisterResource("oci_file_storage_mount_target", FileStorageMountTargetResource)
+	tfresource.RegisterResource("oci_file_storage_replication", FileStorageReplicationResource)
+	tfresource.RegisterResource("oci_file_storage_outbound_connector", FileStorageOutboundConnectorResource)
+	tfresource.RegisterResource("oci_file_storage_snapshot", FileStorageSnapshotResource)
 }

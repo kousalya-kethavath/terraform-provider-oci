@@ -6,7 +6,7 @@ package service_catalog
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_service_catalog_private_application", ServiceCatalogPrivateApplicationResource())
-	tfresource.RegisterResource("oci_service_catalog_service_catalog", ServiceCatalogServiceCatalogResource())
-	tfresource.RegisterResource("oci_service_catalog_service_catalog_association", ServiceCatalogServiceCatalogAssociationResource())
+	tfresource.RegisterResource("oci_service_catalog_private_application", ServiceCatalogPrivateApplicationResource)
+	tfresource.RegisterResource("oci_service_catalog_service_catalog", ServiceCatalogServiceCatalogResource)
+	tfresource.RegisterResource("oci_service_catalog_service_catalog_association", ServiceCatalogServiceCatalogAssociationResource)
 }

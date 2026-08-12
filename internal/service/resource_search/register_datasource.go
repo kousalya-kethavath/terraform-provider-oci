@@ -6,5 +6,5 @@ package resource_search
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_resource_search", ResourceSearchDataSource())
+	tfresource.RegisterDatasource("oci_resource_search", ResourceSearchDataSource)
 }

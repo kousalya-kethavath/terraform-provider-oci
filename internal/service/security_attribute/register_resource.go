@@ -6,6 +6,6 @@ package security_attribute
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_security_attribute_security_attribute", SecurityAttributeSecurityAttributeResource())
-	tfresource.RegisterResource("oci_security_attribute_security_attribute_namespace", SecurityAttributeSecurityAttributeNamespaceResource())
+	tfresource.RegisterResource("oci_security_attribute_security_attribute", SecurityAttributeSecurityAttributeResource)
+	tfresource.RegisterResource("oci_security_attribute_security_attribute_namespace", SecurityAttributeSecurityAttributeNamespaceResource)
 }
