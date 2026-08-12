@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"fmt"
 	"slices"
 	"time"
 
@@ -23,6 +24,24 @@ func cloneSDKv2ResourceMap(source map[string]*schema.Resource) map[string]*schem
 		result[name] = cloneSDKv2Resource(resource)
 	}
 	return result
+}
+
+// cloneSelectedSDKv2Resources returns isolated copies of only the named
+// resources. It avoids cloning the complete provider schema for consumers that
+// run a known subset of Terraform resources in process.
+func cloneSelectedSDKv2Resources(source map[string]*schema.Resource, names []string) (map[string]*schema.Resource, error) {
+	result := make(map[string]*schema.Resource, len(names))
+	for _, name := range names {
+		if _, exists := result[name]; exists {
+			continue
+		}
+		resource, ok := source[name]
+		if !ok {
+			return nil, fmt.Errorf("unknown Terraform Provider OCI resource %q", name)
+		}
+		result[name] = cloneSDKv2Resource(resource)
+	}
+	return result, nil
 }
 
 func cloneSDKv2Resource(source *schema.Resource) *schema.Resource {
