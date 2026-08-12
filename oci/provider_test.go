@@ -54,3 +54,22 @@ func TestNewReturnsFreshFrameworkInstances(t *testing.T) {
 		t.Fatalf("unexpected Framework provider type names: %q, %q", firstMetadata.TypeName, secondMetadata.TypeName)
 	}
 }
+
+func TestSelectiveSDKv2Constructors(t *testing.T) {
+	const resourceName = "oci_identity_tag_namespace"
+	p, err := oci.ProviderForResources(resourceName)
+	if err != nil {
+		t.Fatalf("ProviderForResources: %v", err)
+	}
+	if len(p.ResourcesMap) != 1 || p.ResourcesMap[resourceName] == nil || len(p.DataSourcesMap) != 0 {
+		t.Fatalf("unexpected selective provider maps: resources=%d dataSources=%d", len(p.ResourcesMap), len(p.DataSourcesMap))
+	}
+
+	configuration := oci.ProviderForConfiguration()
+	if len(configuration.Schema) == 0 || configuration.ConfigureFunc == nil {
+		t.Fatal("ProviderForConfiguration returned an unusable provider")
+	}
+	if len(configuration.ResourcesMap) != 0 || len(configuration.DataSourcesMap) != 0 {
+		t.Fatalf("configuration-only provider retained resources=%d dataSources=%d", len(configuration.ResourcesMap), len(configuration.DataSourcesMap))
+	}
+}

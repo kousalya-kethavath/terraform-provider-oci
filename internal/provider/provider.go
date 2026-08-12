@@ -133,6 +133,25 @@ func NewSDKv2ProviderForInProcess() *schema.Provider {
 	return newSDKv2Provider(true)
 }
 
+// NewSDKv2ProviderForInProcessResources returns a fresh in-process SDKv2
+// provider containing only the requested resource schemas and no data-source
+// schemas.
+func NewSDKv2ProviderForInProcessResources(resourceNames ...string) (*schema.Provider, error) {
+	registerProviderAliases()
+	resources, err := cloneSelectedSDKv2Resources(globalvar.OciResources, resourceNames)
+	if err != nil {
+		return nil, err
+	}
+	return newSDKv2ProviderWithMaps(true, resources, nil), nil
+}
+
+// NewSDKv2ProviderForInProcessConfiguration returns a fresh in-process SDKv2
+// provider with provider configuration schema but without resource or
+// data-source schemas.
+func NewSDKv2ProviderForInProcessConfiguration() *schema.Provider {
+	return newSDKv2ProviderWithMaps(true, nil, nil)
+}
+
 func newSDKv2Provider(inProcess bool) *schema.Provider {
 	dataSources := DataSourcesMap()
 	resources := ResourcesMap()
@@ -140,7 +159,10 @@ func newSDKv2Provider(inProcess bool) *schema.Provider {
 		dataSources = cloneSDKv2ResourceMap(dataSources)
 		resources = cloneSDKv2ResourceMap(resources)
 	}
+	return newSDKv2ProviderWithMaps(inProcess, resources, dataSources)
+}
 
+func newSDKv2ProviderWithMaps(inProcess bool, resources, dataSources map[string]*schema.Resource) *schema.Provider {
 	p := &schema.Provider{
 		DataSourcesMap: dataSources,
 		Schema:         SchemaMap(),
