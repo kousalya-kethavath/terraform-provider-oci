@@ -382,7 +382,7 @@ func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess b
 		tf_resource.DualStackEndpointTemplateEnabled = dualStackEndpointEnabled(d)
 	}
 	clients := &tf_client.OracleClients{
-		SdkClientMap:  make(map[string]interface{}, len(tf_client.OracleClientRegistrationsVar.RegisteredClients)),
+		SdkClientMap:  make(map[string]interface{}),
 		Configuration: make(map[string]string),
 	}
 
@@ -421,7 +421,11 @@ func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess b
 		return nil, err
 	}
 
-	err = tf_client.CreateSDKClients(clients, sdkConfigProvider, configureClient)
+	createSDKClients := tf_client.CreateSDKClients
+	if inProcess {
+		createSDKClients = tf_client.CreateSDKClientsLazy
+	}
+	err = createSDKClients(clients, sdkConfigProvider, configureClient)
 	if err != nil {
 		return nil, err
 	}

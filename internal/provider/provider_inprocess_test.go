@@ -4,13 +4,16 @@
 package provider
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	frameworktypes "github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	tfclient "github.com/oracle/terraform-provider-oci/internal/client"
 	"github.com/oracle/terraform-provider-oci/internal/globalvar"
 )
 
@@ -123,6 +126,54 @@ func TestCloneSDKv2ResourceIsolatesMutableStructures(t *testing.T) {
 	if source.Schema["field"].ConflictsWith[0] != "other" || *source.Timeouts.Create != time.Minute {
 		t.Fatal("mutating a cloned resource affected its source")
 	}
+}
+
+func TestClonedSDKv2ResourceReturnsLazyClientInitializationErrors(t *testing.T) {
+	resource := cloneSDKv2Resource(&schema.Resource{
+		Importer: &schema.ResourceImporter{
+			StateContext: func(_ context.Context, _ *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				meta.(*tfclient.OracleClients).GetClient("oci_missing.Client")
+				return nil, nil
+			},
+		},
+		Create: func(_ *schema.ResourceData, meta interface{}) error {
+			meta.(*tfclient.OracleClients).GetClient("oci_missing.Client")
+			return nil
+		},
+		ReadContext: func(_ context.Context, _ *schema.ResourceData, meta interface{}) diag.Diagnostics {
+			meta.(*tfclient.OracleClients).GetClient("oci_missing.Client")
+			return nil
+		},
+	})
+	clients := &tfclient.OracleClients{SdkClientMap: make(map[string]interface{})}
+
+	err := resource.Create(nil, clients)
+	if err == nil || !strings.Contains(err.Error(), "provider clients are not configured") {
+		t.Fatalf("Create lazy-client error = %v", err)
+	}
+	diagnostics := resource.ReadContext(t.Context(), nil, clients)
+	if !diagnostics.HasError() || !strings.Contains(diagnostics[0].Summary, "provider clients are not configured") {
+		t.Fatalf("ReadContext lazy-client diagnostics = %v", diagnostics)
+	}
+	_, err = resource.Importer.StateContext(t.Context(), nil, clients)
+	if err == nil || !strings.Contains(err.Error(), "provider clients are not configured") {
+		t.Fatalf("import lazy-client error = %v", err)
+	}
+}
+
+func TestClonedSDKv2ResourceDoesNotMaskUnrelatedPanics(t *testing.T) {
+	resource := cloneSDKv2Resource(&schema.Resource{
+		Create: func(*schema.ResourceData, interface{}) error {
+			panic("programming error")
+		},
+	})
+
+	defer func() {
+		if recovered := recover(); recovered != "programming error" {
+			t.Fatalf("recovered panic = %v", recovered)
+		}
+	}()
+	_ = resource.Create(nil, nil)
 }
 
 func assertSDKv2ResourceMapsIsolated(t *testing.T, first, second map[string]*schema.Resource) {
