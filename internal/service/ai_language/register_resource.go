@@ -6,8 +6,8 @@ package ai_language
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_ai_language_endpoint", AiLanguageEndpointResource())
-	tfresource.RegisterResource("oci_ai_language_job", AiLanguageJobResource())
-	tfresource.RegisterResource("oci_ai_language_model", AiLanguageModelResource())
-	tfresource.RegisterResource("oci_ai_language_project", AiLanguageProjectResource())
+	tfresource.RegisterResource("oci_ai_language_endpoint", AiLanguageEndpointResource)
+	tfresource.RegisterResource("oci_ai_language_job", AiLanguageJobResource)
+	tfresource.RegisterResource("oci_ai_language_model", AiLanguageModelResource)
+	tfresource.RegisterResource("oci_ai_language_project", AiLanguageProjectResource)
 }

@@ -6,6 +6,6 @@ package delegate_access_control
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_delegate_access_control_delegation_control", DelegateAccessControlDelegationControlResource())
-	tfresource.RegisterResource("oci_delegate_access_control_delegation_subscription", DelegateAccessControlDelegationSubscriptionResource())
+	tfresource.RegisterResource("oci_delegate_access_control_delegation_control", DelegateAccessControlDelegationControlResource)
+	tfresource.RegisterResource("oci_delegate_access_control_delegation_subscription", DelegateAccessControlDelegationSubscriptionResource)
 }

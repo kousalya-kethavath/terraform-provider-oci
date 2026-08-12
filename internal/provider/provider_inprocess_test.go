@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"maps"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	frameworktypes "github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	oci_common "github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/terraform-provider-oci/internal/globalvar"
 )
 
@@ -31,6 +33,7 @@ func TestProviderConstructorsReturnFreshInstances(t *testing.T) {
 
 func TestSelectiveInProcessProvider(t *testing.T) {
 	const resourceName = "oci_identity_tag_namespace"
+	enabledServices := maps.Clone(oci_common.OciSdkEnabledServicesMap)
 	first, err := NewSDKv2ProviderForInProcessResources(resourceName, resourceName)
 	if err != nil {
 		t.Fatalf("construct selective provider: %v", err)
@@ -54,6 +57,9 @@ func TestSelectiveInProcessProvider(t *testing.T) {
 
 	if _, err := NewSDKv2ProviderForInProcessResources("oci_missing_resource"); err == nil {
 		t.Fatal("selective provider accepted an unknown resource")
+	}
+	if !maps.Equal(enabledServices, oci_common.OciSdkEnabledServicesMap) {
+		t.Fatal("selective schema construction changed OCI SDK enabled services")
 	}
 }
 

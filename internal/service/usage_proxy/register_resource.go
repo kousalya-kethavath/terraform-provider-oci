@@ -6,5 +6,5 @@ package usage_proxy
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_usage_proxy_subscription_redeemable_user", UsageProxySubscriptionRedeemableUserResource())
+	tfresource.RegisterResource("oci_usage_proxy_subscription_redeemable_user", UsageProxySubscriptionRedeemableUserResource)
 }

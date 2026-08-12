@@ -6,5 +6,5 @@ package audit
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_audit_configuration", AuditConfigurationResource())
+	tfresource.RegisterResource("oci_audit_configuration", AuditConfigurationResource)
 }

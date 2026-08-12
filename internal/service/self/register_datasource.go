@@ -6,8 +6,8 @@ package self
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_self_partner_subscriptions", SelfPartnerSubscriptionsDataSource())
-	tfresource.RegisterDatasource("oci_self_subscription", SelfSubscriptionDataSource())
-	tfresource.RegisterDatasource("oci_self_subscription_token", SelfSubscriptionTokenDataSource())
-	tfresource.RegisterDatasource("oci_self_subscriptions", SelfSubscriptionsDataSource())
+	tfresource.RegisterDatasource("oci_self_partner_subscriptions", SelfPartnerSubscriptionsDataSource)
+	tfresource.RegisterDatasource("oci_self_subscription", SelfSubscriptionDataSource)
+	tfresource.RegisterDatasource("oci_self_subscription_token", SelfSubscriptionTokenDataSource)
+	tfresource.RegisterDatasource("oci_self_subscriptions", SelfSubscriptionsDataSource)
 }
