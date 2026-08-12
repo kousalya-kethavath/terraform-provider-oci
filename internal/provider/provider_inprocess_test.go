@@ -50,6 +50,50 @@ func TestSDKv2ProviderSchemaOwnership(t *testing.T) {
 	}
 }
 
+func TestSelectiveInProcessProvider(t *testing.T) {
+	const resourceName = "oci_identity_tag_namespace"
+	first, err := NewSDKv2ProviderForInProcessResources(resourceName, resourceName)
+	if err != nil {
+		t.Fatalf("construct selective provider: %v", err)
+	}
+	second, err := NewSDKv2ProviderForInProcessResources(resourceName)
+	if err != nil {
+		t.Fatalf("construct second selective provider: %v", err)
+	}
+	if len(first.ResourcesMap) != 1 || first.ResourcesMap[resourceName] == nil {
+		t.Fatalf("selective resource map = %v, want only %q", first.ResourcesMap, resourceName)
+	}
+	if len(first.DataSourcesMap) != 0 {
+		t.Fatalf("selective provider retained %d data sources, want 0", len(first.DataSourcesMap))
+	}
+	if err := first.InternalValidate(); err != nil {
+		t.Fatalf("selective provider validation failed: %v", err)
+	}
+	if first.ResourcesMap[resourceName] == second.ResourcesMap[resourceName] {
+		t.Fatal("selective providers share a mutable resource schema")
+	}
+
+	if _, err := NewSDKv2ProviderForInProcessResources("oci_missing_resource"); err == nil {
+		t.Fatal("selective provider accepted an unknown resource")
+	}
+}
+
+func TestConfigurationOnlyInProcessProvider(t *testing.T) {
+	p := NewSDKv2ProviderForInProcessConfiguration()
+	if len(p.Schema) == 0 {
+		t.Fatal("configuration-only provider has no provider schema")
+	}
+	if p.ConfigureFunc == nil {
+		t.Fatal("configuration-only provider has no ConfigureFunc")
+	}
+	if len(p.ResourcesMap) != 0 || len(p.DataSourcesMap) != 0 {
+		t.Fatalf("configuration-only provider retained resources=%d dataSources=%d", len(p.ResourcesMap), len(p.DataSourcesMap))
+	}
+	if err := p.InternalValidate(); err != nil {
+		t.Fatalf("configuration-only provider validation failed: %v", err)
+	}
+}
+
 func TestCloneSDKv2ResourceIsolatesMutableStructures(t *testing.T) {
 	timeout := time.Minute
 	source := &schema.Resource{
@@ -307,4 +351,27 @@ func TestInternalAndEmbeddedSDKv2SchemasRemainCompatible(t *testing.T) {
 	if len(cli.DataSourcesMap) != len(embedded.DataSourcesMap) {
 		t.Fatalf("data-source schema size differs: CLI=%d embedded=%d", len(cli.DataSourcesMap), len(embedded.DataSourcesMap))
 	}
+}
+
+func BenchmarkInProcessProviderConstruction(b *testing.B) {
+	b.Run("full", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = NewSDKv2ProviderForInProcess()
+		}
+	})
+	b.Run("identity-resource", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			if _, err := NewSDKv2ProviderForInProcessResources("oci_identity_tag_namespace"); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("configuration-only", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = NewSDKv2ProviderForInProcessConfiguration()
+		}
+	})
 }
