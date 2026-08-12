@@ -6,5 +6,5 @@ package api_platform
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_api_platform_api_platform_instance", ApiPlatformApiPlatformInstanceResource())
+	tfresource.RegisterResource("oci_api_platform_api_platform_instance", ApiPlatformApiPlatformInstanceResource)
 }

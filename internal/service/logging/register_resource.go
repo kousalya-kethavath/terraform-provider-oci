@@ -6,8 +6,8 @@ package logging
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_logging_log", LoggingLogResource())
-	tfresource.RegisterResource("oci_logging_log_group", LoggingLogGroupResource())
-	tfresource.RegisterResource("oci_logging_log_saved_search", LoggingLogSavedSearchResource())
-	tfresource.RegisterResource("oci_logging_unified_agent_configuration", LoggingUnifiedAgentConfigurationResource())
+	tfresource.RegisterResource("oci_logging_log", LoggingLogResource)
+	tfresource.RegisterResource("oci_logging_log_group", LoggingLogGroupResource)
+	tfresource.RegisterResource("oci_logging_log_saved_search", LoggingLogSavedSearchResource)
+	tfresource.RegisterResource("oci_logging_unified_agent_configuration", LoggingUnifiedAgentConfigurationResource)
 }

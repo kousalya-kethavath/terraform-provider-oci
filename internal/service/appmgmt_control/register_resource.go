@@ -6,5 +6,5 @@ package appmgmt_control
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_appmgmt_control_monitor_plugin_management", AppmgmtControlMonitorPluginManagementResource())
+	tfresource.RegisterResource("oci_appmgmt_control_monitor_plugin_management", AppmgmtControlMonitorPluginManagementResource)
 }

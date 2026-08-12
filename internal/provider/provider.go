@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	tf_core "github.com/oracle/terraform-provider-oci/internal/service/core"
@@ -45,7 +44,6 @@ var ApiKeyConfigAttributes = [5]string{globalvar.UserOcidAttrName, globalvar.Fin
 var TerraformCLIVersion = globalvar.UnknownTerraformCLIVersion
 var schemaMultiEnvDefaultFuncVar = schema.MultiEnvDefaultFunc
 var AvoidWaitingForDeleteTarget bool
-var providerAliasesOnce sync.Once
 
 // creating an interface to aid in unit tests
 type schemaResourceData interface {
@@ -138,11 +136,11 @@ func NewSDKv2ProviderForInProcess() *schema.Provider {
 // schemas.
 func NewSDKv2ProviderForInProcessResources(resourceNames ...string) (*schema.Provider, error) {
 	registerProviderAliases()
-	resources, err := cloneSelectedSDKv2Resources(globalvar.OciResources, resourceNames)
+	resources, err := tf_resource.BuildResources(resourceNames...)
 	if err != nil {
 		return nil, err
 	}
-	return newSDKv2ProviderWithMaps(true, resources, nil), nil
+	return newSDKv2ProviderWithMaps(true, cloneSDKv2ResourceMap(resources), nil), nil
 }
 
 // NewSDKv2ProviderForInProcessConfiguration returns a fresh in-process SDKv2
@@ -333,38 +331,35 @@ func SchemaMap() map[string]*schema.Schema {
 	}
 }
 
-// This returns a map of all data sources to register with Terraform
-// The OciDatasources map is populated by each datasource's init function being invoked before it gets here
+// DataSourcesMap constructs a fresh map of all data sources registered with Terraform.
 func DataSourcesMap() map[string]*schema.Resource {
 	registerProviderAliases()
-	return cloneSDKv2ResourceMap(globalvar.OciDatasources)
+	return cloneSDKv2ResourceMap(tf_resource.BuildAllDatasources())
 }
 
-// This returns a map of all resources to register with Terraform
-// The OciResource map is populated by each resource's init function being invoked before it gets here
+// ResourcesMap constructs a fresh map of all resources registered with Terraform.
 func ResourcesMap() map[string]*schema.Resource {
 	registerProviderAliases()
-	return cloneSDKv2ResourceMap(globalvar.OciResources)
+	return cloneSDKv2ResourceMap(tf_resource.BuildAllResources())
 }
 
 func registerProviderAliases() {
-	providerAliasesOnce.Do(func() {
-		// Register aliases once. Provider construction may be concurrent when
-		// the provider is embedded in another Go process.
-		if oci_common.CheckForEnabledServices(globalvar.CoreService) {
-			tf_resource.RegisterDatasource("oci_core_listing_resource_version", tf_core.CoreAppCatalogListingResourceVersionDataSource())
-			tf_resource.RegisterDatasource("oci_core_listing_resource_versions", tf_core.CoreAppCatalogListingResourceVersionsDataSource())
-			tf_resource.RegisterDatasource("oci_core_shape", tf_core.CoreShapesDataSource())
-			tf_resource.RegisterDatasource("oci_core_virtual_networks", tf_core.CoreVcnsDataSource())
-			tf_resource.RegisterResource("oci_core_virtual_network", tf_core.CoreVcnResource())
-		}
-		if oci_common.CheckForEnabledServices(globalvar.LoadBalancerService) {
-			tf_resource.RegisterDatasource("oci_load_balancers", tf_load_balancer.LoadBalancerLoadBalancersDataSource())
-			tf_resource.RegisterDatasource("oci_load_balancer_backendsets", tf_load_balancer.LoadBalancerBackendSetsDataSource())
-			tf_resource.RegisterResource("oci_load_balancer", tf_load_balancer.LoadBalancerLoadBalancerResource())
-			tf_resource.RegisterResource("oci_load_balancer_backendset", tf_load_balancer.LoadBalancerBackendSetResource())
-		}
-	})
+	// Registration is idempotent and synchronized by tfresource. Re-evaluate
+	// enabled services for each provider construction because the OCI SDK allows
+	// callers to enable additional services after process initialization.
+	if oci_common.CheckForEnabledServices(globalvar.CoreService) {
+		tf_resource.RegisterDatasource("oci_core_listing_resource_version", tf_core.CoreAppCatalogListingResourceVersionDataSource)
+		tf_resource.RegisterDatasource("oci_core_listing_resource_versions", tf_core.CoreAppCatalogListingResourceVersionsDataSource)
+		tf_resource.RegisterDatasource("oci_core_shape", tf_core.CoreShapesDataSource)
+		tf_resource.RegisterDatasource("oci_core_virtual_networks", tf_core.CoreVcnsDataSource)
+		tf_resource.RegisterResource("oci_core_virtual_network", tf_core.CoreVcnResource)
+	}
+	if oci_common.CheckForEnabledServices(globalvar.LoadBalancerService) {
+		tf_resource.RegisterDatasource("oci_load_balancers", tf_load_balancer.LoadBalancerLoadBalancersDataSource)
+		tf_resource.RegisterDatasource("oci_load_balancer_backendsets", tf_load_balancer.LoadBalancerBackendSetsDataSource)
+		tf_resource.RegisterResource("oci_load_balancer", tf_load_balancer.LoadBalancerLoadBalancerResource)
+		tf_resource.RegisterResource("oci_load_balancer_backendset", tf_load_balancer.LoadBalancerBackendSetResource)
+	}
 }
 
 func ProviderConfig(d *schema.ResourceData) (interface{}, error) {

@@ -6,5 +6,5 @@ package apm
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_apm_apm_domain", ApmApmDomainResource())
+	tfresource.RegisterResource("oci_apm_apm_domain", ApmApmDomainResource)
 }

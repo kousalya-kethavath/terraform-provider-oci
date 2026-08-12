@@ -6,7 +6,7 @@ package distributed_database
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_distributed_database_distributed_autonomous_database", DistributedDatabaseDistributedAutonomousDatabaseResource())
-	tfresource.RegisterResource("oci_distributed_database_distributed_database", DistributedDatabaseDistributedDatabaseResource())
-	tfresource.RegisterResource("oci_distributed_database_distributed_database_private_endpoint", DistributedDatabaseDistributedDatabasePrivateEndpointResource())
+	tfresource.RegisterResource("oci_distributed_database_distributed_autonomous_database", DistributedDatabaseDistributedAutonomousDatabaseResource)
+	tfresource.RegisterResource("oci_distributed_database_distributed_database", DistributedDatabaseDistributedDatabaseResource)
+	tfresource.RegisterResource("oci_distributed_database_distributed_database_private_endpoint", DistributedDatabaseDistributedDatabasePrivateEndpointResource)
 }

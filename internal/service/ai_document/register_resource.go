@@ -6,7 +6,7 @@ package ai_document
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_ai_document_model", AiDocumentModelResource())
-	tfresource.RegisterResource("oci_ai_document_processor_job", AiDocumentProcessorJobResource())
-	tfresource.RegisterResource("oci_ai_document_project", AiDocumentProjectResource())
+	tfresource.RegisterResource("oci_ai_document_model", AiDocumentModelResource)
+	tfresource.RegisterResource("oci_ai_document_processor_job", AiDocumentProcessorJobResource)
+	tfresource.RegisterResource("oci_ai_document_project", AiDocumentProjectResource)
 }

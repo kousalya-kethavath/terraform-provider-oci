@@ -6,7 +6,7 @@ package osub_usage
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_osub_usage_computed_usage", OsubUsageComputedUsageDataSource())
-	tfresource.RegisterDatasource("oci_osub_usage_computed_usage_aggregateds", OsubUsageComputedUsageAggregatedsDataSource())
-	tfresource.RegisterDatasource("oci_osub_usage_computed_usages", OsubUsageComputedUsagesDataSource())
+	tfresource.RegisterDatasource("oci_osub_usage_computed_usage", OsubUsageComputedUsageDataSource)
+	tfresource.RegisterDatasource("oci_osub_usage_computed_usage_aggregateds", OsubUsageComputedUsageAggregatedsDataSource)
+	tfresource.RegisterDatasource("oci_osub_usage_computed_usages", OsubUsageComputedUsagesDataSource)
 }

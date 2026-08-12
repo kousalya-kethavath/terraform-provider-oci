@@ -6,5 +6,5 @@ package container_instances
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_container_instances_container_instance", ContainerInstancesContainerInstanceResource())
+	tfresource.RegisterResource("oci_container_instances_container_instance", ContainerInstancesContainerInstanceResource)
 }
