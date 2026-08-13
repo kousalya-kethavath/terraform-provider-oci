@@ -855,6 +855,7 @@ func createMysqlMysqlBackup(d *schema.ResourceData, m interface{}) error {
 	sync := &MysqlMysqlBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).DbBackupsClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	return tfresource.CreateResource(d, sync)
 }
@@ -863,6 +864,7 @@ func readMysqlMysqlBackup(d *schema.ResourceData, m interface{}) error {
 	sync := &MysqlMysqlBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).DbBackupsClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	return tfresource.ReadResource(sync)
 }
@@ -871,6 +873,7 @@ func updateMysqlMysqlBackup(d *schema.ResourceData, m interface{}) error {
 	sync := &MysqlMysqlBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).DbBackupsClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 
 	if _, ok := sync.D.GetOkExists("validate_trigger"); ok && sync.D.HasChange("validate_trigger") {
 		oldRaw, newRaw := sync.D.GetChange("validate_trigger")
@@ -899,6 +902,7 @@ func deleteMysqlMysqlBackup(d *schema.ResourceData, m interface{}) error {
 	sync := &MysqlMysqlBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).DbBackupsClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureClient
 	sync.DisableNotFoundRetries = true
 
 	return tfresource.DeleteResource(d, sync)
@@ -907,6 +911,7 @@ func deleteMysqlMysqlBackup(d *schema.ResourceData, m interface{}) error {
 type MysqlMysqlBackupResourceCrud struct {
 	tfresource.BaseCrud
 	Client                 *oci_mysql.DbBackupsClient
+	ConfigureClient        client.ConfigureClient
 	Res                    *oci_mysql.Backup
 	DisableNotFoundRetries bool
 }
@@ -1080,12 +1085,12 @@ func (s *MysqlMysqlBackupResourceCrud) createMysqlBackupCopy() error {
 		}
 	}
 
-	err := s.createDbBackupClientInRegion(currentRegion)
+	copyClient, err := s.createDbBackupClientInRegion(currentRegion)
 	if err != nil {
 		return err
 	}
 
-	response, err := s.Client.CopyBackup(context.Background(), copyMysqlBackupRequest)
+	response, err := copyClient.CopyBackup(context.Background(), copyMysqlBackupRequest)
 	if err != nil {
 		return err
 	}

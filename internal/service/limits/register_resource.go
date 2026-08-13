@@ -6,5 +6,5 @@ package limits
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_limits_quota", LimitsQuotaResource())
+	tfresource.RegisterResource("oci_limits_quota", LimitsQuotaResource)
 }

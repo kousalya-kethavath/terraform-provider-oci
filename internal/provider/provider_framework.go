@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -29,6 +30,8 @@ import (
 )
 
 type ociPluginProvider struct {
+	inProcess                                   bool
+	terraformVersion                            string
 	configured                                  bool
 	auth                                        string
 	tenancyOcid                                 string
@@ -89,6 +92,13 @@ type ociProviderModel struct {
 
 func New() provider.Provider {
 	return &ociPluginProvider{}
+}
+
+// NewFrameworkProviderForInProcess returns a fresh Plugin Framework provider
+// whose configuration path does not mutate Terraform Provider OCI process
+// globals. Consumers must use default values for process-global options.
+func NewFrameworkProviderForInProcess() provider.Provider {
+	return &ociPluginProvider{inProcess: true}
 }
 
 func (p *ociPluginProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -223,6 +233,7 @@ func (p *ociPluginProvider) Schema(ctx context.Context, req provider.SchemaReque
 }
 
 func (p *ociPluginProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	p.terraformVersion = req.TerraformVersion
 	var config ociProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -232,9 +243,14 @@ func (p *ociPluginProvider) Configure(ctx context.Context, req provider.Configur
 
 	// Set Defaults from Env variables, if not provided in tf config
 	p.SetDefaults(&config)
+	resp.Diagnostics.Append(p.setIgnoreDefinedTags(ctx, config.IgnoreDefinedTags)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	clients, err := p.SetProviderConfig()
 	if err != nil {
 		log.Println("PluginProvider Configure err....", err)
+		resp.Diagnostics.AddError("Unable to configure OCI provider", err.Error())
 		return
 	}
 
@@ -361,17 +377,34 @@ func (p *ociPluginProvider) SetDefaults(config *ociProviderModel) {
 	p.disableAutoRetries = config.DisableAutoRetries.ValueBool()
 	p.retryDurationSeconds = config.RetryDurationSeconds.ValueInt64()
 	p.configFileProfile = config.ConfigFileProfile.ValueString()
-	p.configured = true
-	tf_resource.RealmSpecificServiceEndpointTemplateEnabled = getStringFromFwBool(config.RealmSpecificServiceEndpointTemplateEnabled)
-	tf_resource.DualStackEndpointTemplateEnabled = getStringFromFwBool(config.DualStackEndpointEnabled)
+	p.realmSpecificServiceEndpointTemplateEnabled = config.RealmSpecificServiceEndpointTemplateEnabled.ValueBool()
+	p.dualStackEndpointEnabled = config.DualStackEndpointEnabled.ValueBool()
 	p.retriesConfigFile = config.RetriesConfigFile.ValueString()
+	p.configured = true
 
+}
+
+func (p *ociPluginProvider) setIgnoreDefinedTags(ctx context.Context, value types.List) diag.Diagnostics {
+	p.ignoreDefinedTags = nil
+	if value.IsNull() {
+		return nil
+	}
+	return value.ElementsAs(ctx, &p.ignoreDefinedTags, false)
 }
 
 func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
 	//tf_resource.DefinedTagsToSuppress = IgnoreDefinedTags(req)
+	if p.inProcess {
+		if err := p.validateInProcessProviderConfig(); err != nil {
+			return nil, err
+		}
+	} else {
+		tf_resource.RealmSpecificServiceEndpointTemplateEnabled = getStringFromBool(p.realmSpecificServiceEndpointTemplateEnabled)
+		tf_resource.DualStackEndpointTemplateEnabled = getStringFromBool(p.dualStackEndpointEnabled)
+	}
+
 	clients := &tf_client.OracleClients{
-		SdkClientMap:  make(map[string]interface{}, len(tf_client.OracleClientRegistrationsVar.RegisteredClients)),
+		SdkClientMap:  make(map[string]interface{}),
 		Configuration: make(map[string]string),
 	}
 
@@ -379,10 +412,10 @@ func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
 
 	retryDurationSeconds := p.retryDurationSeconds
 
-	if disableAutoRetries {
+	if !p.inProcess && disableAutoRetries {
 		tf_resource.ShortRetryTime = 0
 		tf_resource.LongRetryTime = 0
-	} else if retryDurationSeconds > 0 {
+	} else if !p.inProcess && retryDurationSeconds > 0 {
 		val := time.Duration(retryDurationSeconds) * time.Second
 		if retryDurationSeconds < 0 {
 			// Retry for maximum amount of time, if a negative value was specified
@@ -392,7 +425,7 @@ func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
 	}
 
 	retriesConfigFile := p.retriesConfigFile
-	if len(retriesConfigFile) > 0 {
+	if !p.inProcess && len(retriesConfigFile) > 0 {
 		err := tf_resource.SetRetriesConfig(retriesConfigFile)
 		if err != nil {
 			return nil, err
@@ -406,20 +439,58 @@ func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
 
 	httpClient := BuildHttpClient()
 
-	// beware: global variable `configureClient` set here--used elsewhere outside this execution path
-	tf_client.ConfigureClientVar, err = BuildConfigureClientFn(sdkConfigProvider, httpClient)
+	configureClient, err := buildConfigureClientFn(sdkConfigProvider, httpClient, p.terraformVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	err = tf_client.CreateSDKClients(clients, sdkConfigProvider, tf_client.ConfigureClientVar)
+	createSDKClients := tf_client.CreateSDKClients
+	if p.inProcess {
+		createSDKClients = tf_client.CreateSDKClientsLazy
+	}
+	err = createSDKClients(clients, sdkConfigProvider, configureClient)
 	if err != nil {
 		return nil, err
 	}
 
-	AvoidWaitingForDeleteTarget, _ = strconv.ParseBool(utils.GetEnvSettingWithDefault("avoid_waiting_for_delete_target", "false"))
+	if !p.inProcess {
+		AvoidWaitingForDeleteTarget, _ = strconv.ParseBool(utils.GetEnvSettingWithDefault("avoid_waiting_for_delete_target", "false"))
+	}
 
 	return clients, nil
+}
+
+func (p *ociPluginProvider) validateInProcessProviderConfig() error {
+	unsupported := make([]string, 0, 6)
+	if len(p.ignoreDefinedTags) != 0 {
+		unsupported = append(unsupported, globalvar.DefinedTagsToIgnore)
+	}
+	if p.realmSpecificServiceEndpointTemplateEnabled {
+		unsupported = append(unsupported, globalvar.RealmSpecificServiceEndpointTemplateEnabled)
+	}
+	if p.dualStackEndpointEnabled {
+		unsupported = append(unsupported, globalvar.DualStackEndpointEnabled)
+	}
+	if p.disableAutoRetries {
+		unsupported = append(unsupported, globalvar.DisableAutoRetriesAttrName)
+	}
+	if p.retryDurationSeconds != 0 {
+		unsupported = append(unsupported, globalvar.RetryDurationSecondsAttrName)
+	}
+	if p.retriesConfigFile != "" {
+		unsupported = append(unsupported, globalvar.RetriesConfigFile)
+	}
+	if len(unsupported) != 0 {
+		return fmt.Errorf("provider-global option(s) are not supported for in-process use: %s", strings.Join(unsupported, ", "))
+	}
+	return nil
+}
+
+func getStringFromBool(value bool) string {
+	if value {
+		return "true"
+	}
+	return ""
 }
 
 func (p *ociPluginProvider) _GetSdkConfigProvider(clients *tf_client.OracleClients) (oci_common.ConfigurationProvider, error) {

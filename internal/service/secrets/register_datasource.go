@@ -6,6 +6,6 @@ package secrets
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_secrets_secretbundle", SecretsSecretbundleDataSource())
-	tfresource.RegisterDatasource("oci_secrets_secretbundle_versions", SecretsSecretbundleVersionsDataSource())
+	tfresource.RegisterDatasource("oci_secrets_secretbundle", SecretsSecretbundleDataSource)
+	tfresource.RegisterDatasource("oci_secrets_secretbundle_versions", SecretsSecretbundleVersionsDataSource)
 }

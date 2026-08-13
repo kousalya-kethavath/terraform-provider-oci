@@ -14,7 +14,6 @@ import (
 
 	"github.com/hashicorp/go-cty/cty"
 	oci_common "github.com/oracle/oci-go-sdk/v65/common"
-	tf_client "github.com/oracle/terraform-provider-oci/internal/client"
 	"github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -163,7 +162,7 @@ func (s *CoreVolumeBackupResourceCrud) createBlockStorageSourceRegionClient(regi
 		if err != nil {
 			return fmt.Errorf("cannot Create client for the source region: %v", err)
 		}
-		err = tf_client.ConfigureClientVar(&sourceBlockStorageClient.BaseClient)
+		err = s.ConfigureClient(&sourceBlockStorageClient.BaseClient)
 		if err != nil {
 			return fmt.Errorf("cannot configure client for the source region: %v", err)
 		}
@@ -180,7 +179,7 @@ func (s *CoreVolumeGroupBackupResourceCrud) createBlockStorageSourceRegionClient
 		if err != nil {
 			return fmt.Errorf("cannot Create client for the source region: %v", err)
 		}
-		err = tf_client.ConfigureClientVar(&sourceBlockStorageClient.BaseClient)
+		err = s.ConfigureClient(&sourceBlockStorageClient.BaseClient)
 		if err != nil {
 			return fmt.Errorf("cannot configure client for the source region: %v", err)
 		}
@@ -197,7 +196,7 @@ func (s *CoreBootVolumeBackupResourceCrud) createBlockStorageSourceRegionClient(
 		if err != nil {
 			return fmt.Errorf("cannot Create client for the source region: %v", err)
 		}
-		err = tf_client.ConfigureClientVar(&sourceBlockStorageClient.BaseClient)
+		err = s.ConfigureClient(&sourceBlockStorageClient.BaseClient)
 		if err != nil {
 			return fmt.Errorf("cannot configure client for the source region: %v", err)
 		}

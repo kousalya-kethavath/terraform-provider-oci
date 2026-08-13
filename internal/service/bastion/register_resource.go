@@ -6,6 +6,6 @@ package bastion
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_bastion_bastion", BastionBastionResource())
-	tfresource.RegisterResource("oci_bastion_session", BastionSessionResource())
+	tfresource.RegisterResource("oci_bastion_bastion", BastionBastionResource)
+	tfresource.RegisterResource("oci_bastion_session", BastionSessionResource)
 }

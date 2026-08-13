@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"maps"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -82,16 +83,28 @@ var (
 	}
 	tfProviderBuildConfigureClientFn  = tf_provider.BuildConfigureClientFn
 	createSDKClientsVar               = tf_client.CreateSDKClients
-	identityClientListCompartmentsVar = func(clients *tf_client.OracleClients, req oci_identity.ListCompartmentsRequest) (oci_identity.ListCompartmentsResponse, error) {
-		return clients.IdentityClient().ListCompartments(context.Background(), req)
-	}
-	identityClientGetCompartmentVar = func(clients *tf_client.OracleClients, getCompartmentRequest oci_identity.GetCompartmentRequest) (oci_identity.GetCompartmentResponse, error) {
-		return clients.IdentityClient().GetCompartment(context.Background(), getCompartmentRequest)
-	}
-	ctxTerraformImportVar = func(ctx *tf_export.ResourceDiscoveryContext, ctxBackground context.Context, address, id string, importArgs ...tfexec.ImportOption) error {
+	identityClientListCompartmentsVar = listCompartments
+	identityClientGetCompartmentVar   = getCompartment
+	ctxTerraformImportVar             = func(ctx *tf_export.ResourceDiscoveryContext, ctxBackground context.Context, address, id string, importArgs ...tfexec.ImportOption) error {
 		return ctx.Terraform.Import(ctxBackground, address, id, importArgs...)
 	}
 )
+
+func listCompartments(clients *tf_client.OracleClients, req oci_identity.ListCompartmentsRequest) (oci_identity.ListCompartmentsResponse, error) {
+	value, err := clients.GetClientWithError("oci_identity.IdentityClient")
+	if err != nil {
+		return oci_identity.ListCompartmentsResponse{}, err
+	}
+	return value.(*oci_identity.IdentityClient).ListCompartments(context.Background(), req)
+}
+
+func getCompartment(clients *tf_client.OracleClients, req oci_identity.GetCompartmentRequest) (oci_identity.GetCompartmentResponse, error) {
+	value, err := clients.GetClientWithError("oci_identity.IdentityClient")
+	if err != nil {
+		return oci_identity.GetCompartmentResponse{}, err
+	}
+	return value.(*oci_identity.IdentityClient).GetCompartment(context.Background(), req)
+}
 
 func elapsed(what string, step *resourceDiscoveryBaseStep, stage ResourceDiscoveryStage) func() {
 	start := time.Now()
@@ -167,8 +180,7 @@ func printResourceGraphResources(resourceGraphs map[string]tf_export.TerraformRe
 }
 
 func RunListExportableResourcesCommand() error {
-	tf_export.ResourcesMap = tf_provider.ResourcesMap()
-	tf_export.DatasourcesMap = tf_provider.DataSourcesMap()
+	refreshProviderSchemaMaps()
 
 	utils.Logln("List of Discoverable Oracle Cloud Infrastructure Resources")
 
@@ -236,8 +248,7 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 			status = StatusFail
 		}
 	}()
-	tf_export.ResourcesMap = tf_provider.ResourcesMap()
-	tf_export.DatasourcesMap = tf_provider.DataSourcesMap()
+	refreshProviderSchemaMaps()
 
 	if err := args.Validate(); err != nil {
 		return err, StatusFail
@@ -344,6 +355,22 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 	return nil, StatusSuccess
 }
 
+// refreshProviderSchemaMaps rebuilds the provider's generated schemas while
+// preserving entries already registered by Resource Discovery. The v8.22.0
+// provider maps were shared, so callers could add discovery-only schemas before
+// invoking a command. Lazy schema construction returns fresh maps; copying the
+// existing entries preserves that behavior without making provider instances
+// share mutable schemas again.
+func refreshProviderSchemaMaps() {
+	resources := tf_provider.ResourcesMap()
+	maps.Copy(resources, tf_export.ResourcesMap)
+	tf_export.ResourcesMap = resources
+
+	datasources := tf_provider.DataSourcesMap()
+	maps.Copy(datasources, tf_export.DatasourcesMap)
+	tf_export.DatasourcesMap = datasources
+}
+
 func getListOfNotDiscoveredResources(ctx *tf_export.ResourceDiscoveryContext) (error, Status) {
 	notDiscoveredParentResources, notDiscoveredChildResources := ctx.PrintErrors()
 	var notDiscoveredResources []string
@@ -361,7 +388,7 @@ func getListOfNotDiscoveredResources(ctx *tf_export.ResourceDiscoveryContext) (e
 
 func getExportConfig(d *schema.ResourceData) (interface{}, error) {
 	clients := &tf_client.OracleClients{
-		SdkClientMap:  make(map[string]interface{}, len(tf_client.OracleClientRegistrationsVar.RegisteredClients)),
+		SdkClientMap:  make(map[string]interface{}),
 		Configuration: make(map[string]string),
 	}
 
@@ -394,8 +421,6 @@ func getExportConfig(d *schema.ResourceData) (interface{}, error) {
 		client.UserAgent = userAgentString
 		return nil
 	}
-	// beware: global variable `configureClient` set here--used elsewhere outside this execution path
-	tf_client.ConfigureClientVar = configureClientWithUserAgent
 	err = createSDKClientsVar(clients, sdkConfigProvider, configureClientWithUserAgent)
 	if err != nil {
 		return nil, err

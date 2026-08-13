@@ -6,6 +6,6 @@ package cluster_placement_groups
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_cluster_placement_groups_cluster_placement_group", ClusterPlacementGroupsClusterPlacementGroupDataSource())
-	tfresource.RegisterDatasource("oci_cluster_placement_groups_cluster_placement_groups", ClusterPlacementGroupsClusterPlacementGroupsDataSource())
+	tfresource.RegisterDatasource("oci_cluster_placement_groups_cluster_placement_group", ClusterPlacementGroupsClusterPlacementGroupDataSource)
+	tfresource.RegisterDatasource("oci_cluster_placement_groups_cluster_placement_groups", ClusterPlacementGroupsClusterPlacementGroupsDataSource)
 }

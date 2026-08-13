@@ -6,7 +6,7 @@ package analytics
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_analytics_analytics_instance", AnalyticsAnalyticsInstanceResource())
-	tfresource.RegisterResource("oci_analytics_analytics_instance_private_access_channel", AnalyticsAnalyticsInstancePrivateAccessChannelResource())
-	tfresource.RegisterResource("oci_analytics_analytics_instance_vanity_url", AnalyticsAnalyticsInstanceVanityUrlResource())
+	tfresource.RegisterResource("oci_analytics_analytics_instance", AnalyticsAnalyticsInstanceResource)
+	tfresource.RegisterResource("oci_analytics_analytics_instance_private_access_channel", AnalyticsAnalyticsInstancePrivateAccessChannelResource)
+	tfresource.RegisterResource("oci_analytics_analytics_instance_vanity_url", AnalyticsAnalyticsInstanceVanityUrlResource)
 }
