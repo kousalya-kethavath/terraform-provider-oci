@@ -259,7 +259,7 @@ func createDatabaseClient(clients *tf_client.OracleClients, region string) (clie
 	if err != nil {
 		return client, fmt.Errorf("cannot create client for the source region %s: %v", region, err)
 	}
-	err = tf_client.ConfigureClientVar(&databaseClient.BaseClient)
+	err = clients.ConfigureBaseClient(&databaseClient.BaseClient)
 	if err != nil {
 		return client, fmt.Errorf("cannot configure client for the source region: %v", err)
 	}

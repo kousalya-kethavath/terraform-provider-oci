@@ -381,7 +381,8 @@ func getExportConfig(d *schema.ResourceData) (interface{}, error) {
 		return nil, err
 	}
 
-	// beware: global variable `configureClient` set here--used elsewhere outside this execution path
+	// Build a Resource Discovery-specific callback. CreateSDKClients retains it
+	// on this OracleClients instance for clients created later in the workflow.
 	configureClientLocal, err := tfProviderBuildConfigureClientFn(sdkConfigProvider, httpClient)
 	if err != nil {
 		return nil, err
@@ -394,8 +395,6 @@ func getExportConfig(d *schema.ResourceData) (interface{}, error) {
 		client.UserAgent = userAgentString
 		return nil
 	}
-	// beware: global variable `configureClient` set here--used elsewhere outside this execution path
-	tf_client.ConfigureClientVar = configureClientWithUserAgent
 	err = createSDKClientsVar(clients, sdkConfigProvider, configureClientWithUserAgent)
 	if err != nil {
 		return nil, err

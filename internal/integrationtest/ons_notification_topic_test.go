@@ -12,7 +12,6 @@ import (
 
 	"github.com/oracle/terraform-provider-oci/internal/acctest"
 	tf_client "github.com/oracle/terraform-provider-oci/internal/client"
-	tf_provider "github.com/oracle/terraform-provider-oci/internal/provider"
 	"github.com/oracle/terraform-provider-oci/internal/resourcediscovery"
 	"github.com/oracle/terraform-provider-oci/internal/tfresource"
 	"github.com/oracle/terraform-provider-oci/internal/utils"
@@ -239,6 +238,7 @@ func TestOnsNotificationTopicResource_basic(t *testing.T) {
 
 func testAccCheckOnsNotificationTopicDestroy(s *terraform.State) error {
 	noResourceFound := true
+	avoidWaitingForDeleteTarget, _ := strconv.ParseBool(utils.GetEnvSettingWithDefault("avoid_waiting_for_delete_target", "false"))
 	client := acctest.TestAccProvider.Meta().(*tf_client.OracleClients).NotificationControlPlaneClient()
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type == "oci_ons_notification_topic" {
@@ -253,7 +253,7 @@ func testAccCheckOnsNotificationTopicDestroy(s *terraform.State) error {
 
 			response, err := client.GetTopic(context.Background(), request)
 
-			if tf_provider.AvoidWaitingForDeleteTarget && response.LifecycleState == oci_ons.NotificationTopicLifecycleStateDeleting {
+			if avoidWaitingForDeleteTarget && response.LifecycleState == oci_ons.NotificationTopicLifecycleStateDeleting {
 				return nil
 			}
 

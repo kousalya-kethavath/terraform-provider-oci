@@ -4,8 +4,6 @@
 package client
 
 import (
-	"os"
-
 	oci_object_storage "github.com/oracle/oci-go-sdk/v65/objectstorage"
 
 	oci_common "github.com/oracle/oci-go-sdk/v65/common"
@@ -16,18 +14,12 @@ func init() {
 }
 
 func initObjectstorageObjectStorageClient(configProvider oci_common.ConfigurationProvider, configureClient ConfigureClient, serviceClientOverrides ServiceClientOverrides) (interface{}, error) {
-	err := os.Setenv("OCI_REALM_SPECIFIC_SERVICE_ENDPOINT_TEMPLATE_ENABLED", "false")
-	if err != nil {
-		return nil, err
-	}
 	client, err := oci_object_storage.NewObjectStorageClientWithConfigurationProvider(configProvider)
 	if err != nil {
 		return nil, err
 	}
 
-	client.SetCustomClientConfiguration(oci_common.CustomClientConfiguration{
-		RealmSpecificServiceEndpointTemplateEnabled: oci_common.Bool(false),
-	})
+	SetObjectStorageClientDefaults(&client)
 	err = configureClient(&client.BaseClient)
 
 	if err != nil {
@@ -38,6 +30,15 @@ func initObjectstorageObjectStorageClient(configProvider oci_common.Configuratio
 		client.Host = serviceClientOverrides.HostUrlOverride
 	}
 	return &client, nil
+}
+
+// SetObjectStorageClientDefaults preserves the provider's Object Storage
+// endpoint behavior for primary and operation-specific clients without
+// modifying process-wide OCI SDK environment configuration.
+func SetObjectStorageClientDefaults(client *oci_object_storage.ObjectStorageClient) {
+	client.SetCustomClientConfiguration(oci_common.CustomClientConfiguration{
+		RealmSpecificServiceEndpointTemplateEnabled: oci_common.Bool(false),
+	})
 }
 
 func (m *OracleClients) ObjectStorageClient() *oci_object_storage.ObjectStorageClient {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	oci_psql "github.com/oracle/oci-go-sdk/v65/psql"
-	tf_client "github.com/oracle/terraform-provider-oci/internal/client"
 )
 
 func (s *PsqlBackupResourceCrud) createPsqlSourceRegionClient(region string) error {
@@ -13,7 +12,7 @@ func (s *PsqlBackupResourceCrud) createPsqlSourceRegionClient(region string) err
 		if err != nil {
 			return fmt.Errorf("cannot Create client for the source region: %v", err)
 		}
-		err = tf_client.ConfigureClientVar(&sourcePsqlClient.BaseClient)
+		err = s.ConfigureClient(&sourcePsqlClient.BaseClient)
 		if err != nil {
 			return fmt.Errorf("cannot configure client for the source region: %v", err)
 		}
