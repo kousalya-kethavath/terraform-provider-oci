@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"maps"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -356,19 +355,24 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 }
 
 // refreshProviderSchemaMaps rebuilds the provider's generated schemas while
-// preserving entries already registered by Resource Discovery. The v8.22.0
-// provider maps were shared, so callers could add discovery-only schemas before
-// invoking a command. Lazy schema construction returns fresh maps; copying the
-// existing entries preserves that behavior without making provider instances
-// share mutable schemas again.
+// preserving entries registered only by Resource Discovery. Provider-generated
+// entries from an earlier refresh must not replace the fresh schema instances.
 func refreshProviderSchemaMaps() {
 	resources := tf_provider.ResourcesMap()
-	maps.Copy(resources, tf_export.ResourcesMap)
+	preserveDiscoveryOnlySchemas(resources, tf_export.ResourcesMap)
 	tf_export.ResourcesMap = resources
 
 	datasources := tf_provider.DataSourcesMap()
-	maps.Copy(datasources, tf_export.DatasourcesMap)
+	preserveDiscoveryOnlySchemas(datasources, tf_export.DatasourcesMap)
 	tf_export.DatasourcesMap = datasources
+}
+
+func preserveDiscoveryOnlySchemas(providerSchemas, existingSchemas map[string]*schema.Resource) {
+	for name, resourceSchema := range existingSchemas {
+		if _, providerOwned := providerSchemas[name]; !providerOwned {
+			providerSchemas[name] = resourceSchema
+		}
+	}
 }
 
 func getListOfNotDiscoveredResources(ctx *tf_export.ResourceDiscoveryContext) (error, Status) {

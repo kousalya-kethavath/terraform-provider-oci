@@ -23,7 +23,7 @@ func TestIdentityOperationsReturnLazyClientInitializationErrors(t *testing.T) {
 	}
 }
 
-func TestRefreshProviderSchemaMapsPreservesDiscoveryEntries(t *testing.T) {
+func TestRefreshProviderSchemaMapsRebuildsProviderSchemasAndPreservesDiscoveryEntries(t *testing.T) {
 	resources := tfexport.ResourcesMap
 	datasources := tfexport.DatasourcesMap
 	t.Cleanup(func() {
@@ -38,13 +38,35 @@ func TestRefreshProviderSchemaMapsPreservesDiscoveryEntries(t *testing.T) {
 
 	refreshProviderSchemaMaps()
 
+	firstProviderResource := tfexport.ResourcesMap["oci_identity_tag_namespace"]
+	if firstProviderResource == nil {
+		t.Fatal("first refresh did not include a registered provider resource schema")
+	}
+	firstProviderDatasource := tfexport.DatasourcesMap["oci_identity_regions"]
+	if firstProviderDatasource == nil {
+		t.Fatal("first refresh did not include a registered provider data-source schema")
+	}
+
+	refreshProviderSchemaMaps()
+
+	secondProviderResource := tfexport.ResourcesMap["oci_identity_tag_namespace"]
+	if secondProviderResource == nil {
+		t.Fatal("second refresh did not include a registered provider resource schema")
+	}
+	if secondProviderResource == firstProviderResource {
+		t.Fatal("second refresh retained the previous provider resource schema")
+	}
+	secondProviderDatasource := tfexport.DatasourcesMap["oci_identity_regions"]
+	if secondProviderDatasource == nil {
+		t.Fatal("second refresh did not include a registered provider data-source schema")
+	}
+	if secondProviderDatasource == firstProviderDatasource {
+		t.Fatal("second refresh retained the previous provider data-source schema")
+	}
 	if tfexport.ResourcesMap["oci_test_discovery_resource"] != discoveryResource {
-		t.Fatal("refresh removed a Resource Discovery resource schema")
+		t.Fatal("refresh replaced a Resource Discovery-only resource schema")
 	}
 	if tfexport.DatasourcesMap["oci_test_discovery_datasource"] != discoveryDatasource {
-		t.Fatal("refresh removed a Resource Discovery data-source schema")
-	}
-	if tfexport.ResourcesMap["oci_identity_tag_namespace"] == nil {
-		t.Fatal("refresh did not include registered provider resource schemas")
+		t.Fatal("refresh replaced a Resource Discovery-only data-source schema")
 	}
 }
