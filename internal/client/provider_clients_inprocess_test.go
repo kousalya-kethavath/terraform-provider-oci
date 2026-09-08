@@ -141,6 +141,22 @@ func TestOracleClientsConstructSDKClientsLazily(t *testing.T) {
 	}
 }
 
+func TestOracleClientsGetClientUsesTypedPanicForLazyErrors(t *testing.T) {
+	clients := &OracleClients{SdkClientMap: make(map[string]interface{})}
+
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("GetClient did not panic when lazy client initialization failed")
+		}
+		if _, ok := recovered.(*LazyClientInitializationError); !ok {
+			t.Fatalf("GetClient panic type = %T, want *LazyClientInitializationError", recovered)
+		}
+	}()
+
+	clients.GetClient("oci_missing.Client")
+}
+
 func TestOracleClientsPreserveEagerTerraformInitialization(t *testing.T) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {

@@ -420,12 +420,15 @@ func (s *ObjectStorageObjectResourceCrud) createSourceRegionClient(region string
 	if s.SourceRegionClient == nil {
 		sourceObjectStorageClient, err := oci_object_storage.NewObjectStorageClientWithConfigurationProvider(*s.Client.ConfigurationProvider())
 		if err != nil {
-			return fmt.Errorf("cannot Create client for the source region: %v", err)
+			return fmt.Errorf("cannot create Object Storage client for source region %q: %w", region, err)
 		}
+		// Apply the Object Storage-specific realm endpoint default before the
+		// source region is selected below. ConfigureClient applies the owning
+		// provider instance's generic client configuration.
 		tf_client.SetObjectStorageClientDefaults(&sourceObjectStorageClient)
 		err = s.ConfigureClient(&sourceObjectStorageClient.BaseClient)
 		if err != nil {
-			return fmt.Errorf("cannot configure client for the source region: %v", err)
+			return fmt.Errorf("cannot configure Object Storage client for source region %q: %w", region, err)
 		}
 		s.SourceRegionClient = &sourceObjectStorageClient
 	}

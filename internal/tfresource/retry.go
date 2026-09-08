@@ -45,8 +45,15 @@ const (
 
 type ServiceExpectedRetryDurationFunc func(response oci_common.OCIOperationResponse, disableNotFoundRetries bool, optionals ...interface{}) time.Duration
 type expectedRetryDurationFn func(response oci_common.OCIOperationResponse, disableNotFoundRetries bool, service string, optionals ...interface{}) time.Duration
-type operationExpectedRetryDurationFn func(response oci_common.OCIOperationResponse, disableNotFoundRetries bool, service string, optionals ...interface{}) time.Duration
 type getRetryPolicyFunc func(disableNotFoundRetries bool, service string, optionals ...interface{}) *oci_common.RetryPolicy
+
+// OperationRetryDurationOverride changes the retry duration for one operation
+// while retaining the standard MaximumNumberAttempts. This differs from
+// expectedRetryDurationFn, which takes precedence over the standard retry
+// policy and therefore disables the standard attempt limit.
+type OperationRetryDurationOverride struct {
+	shortRetryTime time.Duration
+}
 
 type RetryConfig struct {
 	MaxAttempts              *int                             `json:"max_attempts"`
@@ -260,11 +267,11 @@ func getExpectedRetryDuration(response oci_common.OCIOperationResponse, disableN
 	// Get the override retry duration function if it exists. This gives the most granular control over what value to return, and is passed
 	// into GetRetryPolicy function as an optional argument to override retry durations on a per API basis.
 	if len(optionals) > 0 {
-		if overrideRetryDurationFn, ok := optionals[0].(expectedRetryDurationFn); ok {
-			return overrideRetryDurationFn(response, disableNotFoundRetries, service, optionals)
-		}
-		if overrideRetryDurationFn, ok := optionals[0].(operationExpectedRetryDurationFn); ok {
-			return overrideRetryDurationFn(response, disableNotFoundRetries, service, optionals)
+		switch override := optionals[0].(type) {
+		case expectedRetryDurationFn:
+			return override(response, disableNotFoundRetries, service, optionals)
+		case OperationRetryDurationOverride:
+			return getDefaultExpectedRetryDuration(response, disableNotFoundRetries, override.shortRetryTime, LongRetryTime, ConfiguredRetryDuration)
 		}
 	}
 
@@ -362,12 +369,11 @@ func getDefaultExpectedRetryDuration(response oci_common.OCIOperationResponse, d
 	return defaultRetryTime
 }
 
-// GetShortRetryDurationFunction returns an operation-local retry-duration
-// override without mutating the package-wide retry defaults.
-func GetShortRetryDurationFunction(shortRetryTime time.Duration) operationExpectedRetryDurationFn {
-	return func(response oci_common.OCIOperationResponse, disableNotFoundRetries bool, service string, optionals ...interface{}) time.Duration {
-		return getDefaultExpectedRetryDuration(response, disableNotFoundRetries, shortRetryTime, LongRetryTime, ConfiguredRetryDuration)
-	}
+// NewOperationRetryDurationOverride returns an operation-local retry-duration
+// override without mutating the package-wide retry defaults or changing the
+// standard attempt limit.
+func NewOperationRetryDurationOverride(shortRetryTime time.Duration) OperationRetryDurationOverride {
+	return OperationRetryDurationOverride{shortRetryTime: shortRetryTime}
 }
 
 func isRetriableByEc(r oci_common.OCIOperationResponse) (bool, *time.Duration) {

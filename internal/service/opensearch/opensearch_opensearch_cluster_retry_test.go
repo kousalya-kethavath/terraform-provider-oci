@@ -21,7 +21,7 @@ func TestOpensearchWorkRequestRetryUsesOperationDuration(t *testing.T) {
 		t.Fatal("default work-request policy did not retry a transient error")
 	}
 
-	noRetryDuration := tfresource.GetShortRetryDurationFunction(0)
+	noRetryDuration := tfresource.NewOperationRetryDurationOverride(0)
 	if retry := opensearchClusterWorkRequestShouldRetryFunc(time.Minute, noRetryDuration); retry(response) {
 		t.Fatal("work-request policy ignored the operation-local retry duration")
 	}

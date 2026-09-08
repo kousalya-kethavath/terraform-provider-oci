@@ -80,6 +80,12 @@ func (e *LazyClientInitializationError) Unwrap() error {
 	return e.err
 }
 
+// GetClient preserves the existing accessor contract used by generated SDKv2
+// code. The Terraform CLI path finds an eagerly initialized client, while the
+// in-process path constructs it on first use. Because this legacy signature
+// cannot return an error, lazy initialization failures use a typed panic that
+// the in-process SDKv2 callback wrapper converts to a Terraform error. Callers
+// with an error-returning path should use GetClientWithError directly.
 func (m *OracleClients) GetClient(name string) interface{} {
 	client, err := m.GetClientWithError(name)
 	if err != nil {

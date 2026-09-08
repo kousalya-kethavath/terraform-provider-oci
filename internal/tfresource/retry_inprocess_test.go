@@ -11,7 +11,7 @@ import (
 	oci_common "github.com/oracle/oci-go-sdk/v65/common"
 )
 
-func TestShortRetryDurationFunctionIsOperationLocal(t *testing.T) {
+func TestOperationRetryDurationOverrideIsLocal(t *testing.T) {
 	originalShort := ShortRetryTime
 	originalLong := LongRetryTime
 	originalConfigured := ConfiguredRetryDuration
@@ -25,8 +25,8 @@ func TestShortRetryDurationFunctionIsOperationLocal(t *testing.T) {
 	LongRetryTime = 10 * time.Minute
 	ConfiguredRetryDuration = nil
 	response := oci_common.OCIOperationResponse{Error: &net.DNSError{Err: "timeout", IsTimeout: true}}
-	override := GetShortRetryDurationFunction(50 * time.Minute)
-	if got := override(response, false, "opensearch"); got != 50*time.Minute {
+	override := NewOperationRetryDurationOverride(50 * time.Minute)
+	if got := getExpectedRetryDuration(response, false, "opensearch", override); got != 50*time.Minute {
 		t.Fatalf("operation-local retry duration = %v", got)
 	}
 	if got := GetDefaultExpectedRetryDuration(response, false); got != time.Minute {

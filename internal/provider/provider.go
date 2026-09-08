@@ -377,37 +377,17 @@ func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess b
 		if err := validateInProcessProviderConfig(d); err != nil {
 			return nil, err
 		}
-	} else {
-		tf_resource.DefinedTagsToSuppress = IgnoreDefinedTags(d)
-		tf_resource.RealmSpecificServiceEndpointTemplateEnabled = realmSpecificServiceEndpointTemplateEnabled(d)
-		tf_resource.DualStackEndpointTemplateEnabled = dualStackEndpointEnabled(d)
+	} else if err := setSDKv2TerraformCLIProcessGlobals(d); err != nil {
+		return nil, err
+	}
+	sdkClientCapacity := len(tf_client.OracleClientRegistrationsVar.RegisteredClients)
+	if inProcess {
+		// In-process clients are initialized lazily; reserve space only as used.
+		sdkClientCapacity = 0
 	}
 	clients := &tf_client.OracleClients{
-		SdkClientMap:  make(map[string]interface{}),
+		SdkClientMap:  make(map[string]interface{}, sdkClientCapacity),
 		Configuration: make(map[string]string),
-	}
-
-	if !inProcess && d.Get(globalvar.DisableAutoRetriesAttrName).(bool) {
-		tf_resource.ShortRetryTime = 0
-		tf_resource.LongRetryTime = 0
-	} else if !inProcess {
-		if retryDurationSeconds, exists := d.GetOkExists(globalvar.RetryDurationSecondsAttrName); exists {
-			val := time.Duration(retryDurationSeconds.(int)) * time.Second
-			if retryDurationSeconds.(int) < 0 {
-				// Retry for maximum amount of time, if a negative value was specified
-				val = time.Duration(globalvar.MaxInt64)
-			}
-			tf_resource.ConfiguredRetryDuration = &val
-		}
-	}
-
-	if !inProcess {
-		if retriesConfigFile, exists := d.GetOkExists(globalvar.RetriesConfigFile); exists {
-			err := tf_resource.SetRetriesConfig(retriesConfigFile.(string))
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	sdkConfigProvider, err := GetSdkConfigProvider(d, clients)
@@ -431,11 +411,36 @@ func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess b
 		return nil, err
 	}
 
-	if !inProcess {
-		AvoidWaitingForDeleteTarget, _ = strconv.ParseBool(utils.GetEnvSettingWithDefault("avoid_waiting_for_delete_target", "false"))
+	return clients, nil
+}
+
+// setSDKv2TerraformCLIProcessGlobals preserves the legacy Terraform CLI
+// configuration path. These settings remain process-global and must not be
+// applied when multiple provider instances are embedded in the same process.
+func setSDKv2TerraformCLIProcessGlobals(d *schema.ResourceData) error {
+	tf_resource.DefinedTagsToSuppress = IgnoreDefinedTags(d)
+	tf_resource.RealmSpecificServiceEndpointTemplateEnabled = realmSpecificServiceEndpointTemplateEnabled(d)
+	tf_resource.DualStackEndpointTemplateEnabled = dualStackEndpointEnabled(d)
+
+	if d.Get(globalvar.DisableAutoRetriesAttrName).(bool) {
+		tf_resource.ShortRetryTime = 0
+		tf_resource.LongRetryTime = 0
+	} else if retryDurationSeconds, exists := d.GetOkExists(globalvar.RetryDurationSecondsAttrName); exists {
+		val := time.Duration(retryDurationSeconds.(int)) * time.Second
+		if retryDurationSeconds.(int) < 0 {
+			// Retry for maximum amount of time, if a negative value was specified
+			val = time.Duration(globalvar.MaxInt64)
+		}
+		tf_resource.ConfiguredRetryDuration = &val
 	}
 
-	return clients, nil
+	if retriesConfigFile, exists := d.GetOkExists(globalvar.RetriesConfigFile); exists {
+		if err := tf_resource.SetRetriesConfig(retriesConfigFile.(string)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func validateInProcessProviderConfig(d *schema.ResourceData) error {

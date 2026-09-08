@@ -105,11 +105,16 @@ func (d *VaultSecretVersionDataSource) Read(ctx context.Context, req datasource.
 		resp.Diagnostics.AddError("Unable to initialize OCI Vault client", err.Error())
 		return
 	}
+	vaultClient, ok := value.(*oci_vault.VaultsClient)
+	if !ok {
+		resp.Diagnostics.AddError("Unexpected OCI Vault client type", fmt.Sprintf("Expected *vault.VaultsClient, got %T", value))
+		return
+	}
 	sync := &VaultSecretVersionDataSourceCrud{}
 	sync.Context = &ctx
 	sync.Request = &req
 	sync.Response = resp
-	sync.Client = value.(*oci_vault.VaultsClient)
+	sync.Client = vaultClient
 
 	err = tfresource.ReadResource(sync)
 	if err != nil {

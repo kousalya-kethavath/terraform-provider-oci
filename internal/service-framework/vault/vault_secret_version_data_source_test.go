@@ -40,3 +40,18 @@ func TestConfigureRejectsUnexpectedProviderData(t *testing.T) {
 		t.Fatal("Configure accepted an unexpected provider data type")
 	}
 }
+
+func TestReadRejectsUnexpectedVaultClientType(t *testing.T) {
+	dataSource := &VaultSecretVersionDataSource{
+		clients: &client.OracleClients{
+			SdkClientMap: map[string]interface{}{"oci_vault.VaultsClient": "unexpected"},
+		},
+	}
+	response := &datasource.ReadResponse{}
+
+	dataSource.Read(t.Context(), datasource.ReadRequest{}, response)
+
+	if !response.Diagnostics.HasError() {
+		t.Fatal("Read accepted an unexpected Vault client type")
+	}
+}

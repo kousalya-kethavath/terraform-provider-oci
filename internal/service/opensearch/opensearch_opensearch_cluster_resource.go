@@ -1816,7 +1816,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) UpgradeOpenSearchCluster() err
 	return s.getOpensearchClusterFromWorkRequest(workId, oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate))
 }
 func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterHorizontal() error {
-	retryDuration := tfresource.GetShortRetryDurationFunction(tfresource.LongRetryTime * 5)
+	retryDuration := tfresource.NewOperationRetryDurationOverride(tfresource.LongRetryTime * 5)
 	request := oci_opensearch.ResizeOpensearchClusterHorizontalRequest{}
 
 	if coordinatorNodeCount, ok := s.D.GetOkExists("coordinator_node_count"); ok {
@@ -1864,7 +1864,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterHorizon
 }
 
 func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterVertical() error {
-	retryDuration := tfresource.GetShortRetryDurationFunction(tfresource.LongRetryTime * 5)
+	retryDuration := tfresource.NewOperationRetryDurationOverride(tfresource.LongRetryTime * 5)
 	request := oci_opensearch.ResizeOpensearchClusterVerticalRequest{}
 
 	if coordinatorNodeHostMemoryGB, ok := s.D.GetOkExists("coordinator_node_host_memory_gb"); ok {

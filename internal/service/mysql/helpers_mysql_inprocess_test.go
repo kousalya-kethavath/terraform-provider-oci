@@ -6,6 +6,8 @@ package mysql
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
+	"strings"
 	"testing"
 
 	oci_common "github.com/oracle/oci-go-sdk/v65/common"
@@ -43,6 +45,40 @@ func TestCreateDbBackupClientInRegionDoesNotMutatePrimary(t *testing.T) {
 	}
 	if regional.UserAgent != "regional" || regional.Host == primaryHost {
 		t.Fatalf("regional client was not independently configured: userAgent=%q host=%q", regional.UserAgent, regional.Host)
+	}
+}
+
+func TestCreateDbBackupClientInRegionReportsClientAndRegion(t *testing.T) {
+	const region = "us-phoenix-1"
+	_, err := (&MysqlMysqlBackupResourceCrud{}).createDbBackupClientInRegion(region)
+	if err == nil {
+		t.Fatal("createDbBackupClientInRegion returned nil with no primary client")
+	}
+	if !strings.Contains(err.Error(), "MySQL backup client") || !strings.Contains(err.Error(), region) {
+		t.Fatalf("error %q does not identify the client and region", err)
+	}
+}
+
+func TestCreateDbBackupClientInRegionWrapsConfigurationError(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		t.Fatalf("generate private key: %v", err)
+	}
+	primary, err := oci_mysql.NewDbBackupsClientWithConfigurationProvider(mysqlTestConfiguration{privateKey: privateKey})
+	if err != nil {
+		t.Fatalf("construct primary client: %v", err)
+	}
+	want := errors.New("configure regional client")
+	crud := &MysqlMysqlBackupResourceCrud{
+		Client: &primary,
+		ConfigureClient: client.ConfigureClient(func(*oci_common.BaseClient) error {
+			return want
+		}),
+	}
+
+	_, err = crud.createDbBackupClientInRegion("us-phoenix-1")
+	if !errors.Is(err, want) {
+		t.Fatalf("configuration error = %v, want wrapped %v", err, want)
 	}
 }
 
