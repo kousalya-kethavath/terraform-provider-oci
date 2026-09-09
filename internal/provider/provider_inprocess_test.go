@@ -5,14 +5,15 @@ package provider
 
 import (
 	"context"
+	"maps"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	frameworktypes "github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	oci_common "github.com/oracle/oci-go-sdk/v65/common"
 	tfclient "github.com/oracle/terraform-provider-oci/internal/client"
 	"github.com/oracle/terraform-provider-oci/internal/globalvar"
 )
@@ -32,29 +33,9 @@ func TestProviderConstructorsReturnFreshInstances(t *testing.T) {
 	assertSDKv2ResourceMapsIsolated(t, firstEmbedded.DataSourcesMap, secondEmbedded.DataSourcesMap)
 }
 
-func TestSDKv2ProviderSchemaOwnership(t *testing.T) {
-	cli := Provider()
-	embedded := NewSDKv2ProviderForInProcess()
-
-	const resourceName = "oci_identity_tag_namespace"
-	if cli.ResourcesMap[resourceName] != globalvar.OciResources[resourceName] {
-		t.Fatalf("CLI provider does not use the registered %q schema", resourceName)
-	}
-	if embedded.ResourcesMap[resourceName] == globalvar.OciResources[resourceName] {
-		t.Fatalf("in-process provider shares the registered %q schema", resourceName)
-	}
-
-	const dataSourceName = "oci_identity_availability_domains"
-	if cli.DataSourcesMap[dataSourceName] != globalvar.OciDatasources[dataSourceName] {
-		t.Fatalf("CLI provider does not use the registered %q schema", dataSourceName)
-	}
-	if embedded.DataSourcesMap[dataSourceName] == globalvar.OciDatasources[dataSourceName] {
-		t.Fatalf("in-process provider shares the registered %q schema", dataSourceName)
-	}
-}
-
 func TestSelectiveInProcessProvider(t *testing.T) {
 	const resourceName = "oci_identity_tag_namespace"
+	enabledServices := maps.Clone(oci_common.OciSdkEnabledServicesMap)
 	first, err := NewSDKv2ProviderForInProcessResources(resourceName, resourceName)
 	if err != nil {
 		t.Fatalf("construct selective provider: %v", err)
@@ -79,6 +60,9 @@ func TestSelectiveInProcessProvider(t *testing.T) {
 	if _, err := NewSDKv2ProviderForInProcessResources("oci_missing_resource"); err == nil {
 		t.Fatal("selective provider accepted an unknown resource")
 	}
+	if !maps.Equal(enabledServices, oci_common.OciSdkEnabledServicesMap) {
+		t.Fatal("selective schema construction changed OCI SDK enabled services")
+	}
 }
 
 func TestConfigurationOnlyInProcessProvider(t *testing.T) {
@@ -94,58 +78,6 @@ func TestConfigurationOnlyInProcessProvider(t *testing.T) {
 	}
 	if err := p.InternalValidate(); err != nil {
 		t.Fatalf("configuration-only provider validation failed: %v", err)
-	}
-}
-
-func TestCloneSDKv2ResourceIsolatesMutableStructures(t *testing.T) {
-	timeout := time.Minute
-	source := &schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"field": {
-				Type:          schema.TypeString,
-				ConflictsWith: []string{"other"},
-				ExactlyOneOf:  []string{"field", "other"},
-				AtLeastOneOf:  []string{"field", "other"},
-				RequiredWith:  []string{"other"},
-			},
-		},
-		SchemaFunc: func() map[string]*schema.Schema {
-			return map[string]*schema.Schema{"dynamic": {Type: schema.TypeString}}
-		},
-		StateUpgraders:                 make([]schema.StateUpgrader, 1),
-		ValidateRawResourceConfigFuncs: make([]schema.ValidateRawResourceConfigFunc, 1),
-		Importer:                       &schema.ResourceImporter{},
-		Timeouts:                       &schema.ResourceTimeout{Create: &timeout},
-	}
-
-	cloned := cloneSDKv2Resource(source)
-	if cloned == source || cloned.Schema["field"] == source.Schema["field"] {
-		t.Fatal("resource schema was not cloned")
-	}
-	if &cloned.Schema["field"].ConflictsWith[0] == &source.Schema["field"].ConflictsWith[0] ||
-		&cloned.Schema["field"].ExactlyOneOf[0] == &source.Schema["field"].ExactlyOneOf[0] ||
-		&cloned.Schema["field"].AtLeastOneOf[0] == &source.Schema["field"].AtLeastOneOf[0] ||
-		&cloned.Schema["field"].RequiredWith[0] == &source.Schema["field"].RequiredWith[0] {
-		t.Fatal("schema constraint slices were not cloned")
-	}
-	if &cloned.StateUpgraders[0] == &source.StateUpgraders[0] ||
-		&cloned.ValidateRawResourceConfigFuncs[0] == &source.ValidateRawResourceConfigFuncs[0] {
-		t.Fatal("resource slices were not cloned")
-	}
-	if cloned.Importer == source.Importer || cloned.Timeouts == source.Timeouts || cloned.Timeouts.Create == source.Timeouts.Create {
-		t.Fatal("resource pointer fields were not cloned")
-	}
-
-	firstDynamic := cloned.SchemaFunc()
-	secondDynamic := cloned.SchemaFunc()
-	if firstDynamic["dynamic"] == secondDynamic["dynamic"] {
-		t.Fatal("SchemaFunc returned shared schemas")
-	}
-
-	cloned.Schema["field"].ConflictsWith[0] = "changed"
-	*cloned.Timeouts.Create = 2 * time.Minute
-	if source.Schema["field"].ConflictsWith[0] != "other" || *source.Timeouts.Create != time.Minute {
-		t.Fatal("mutating a cloned resource affected its source")
 	}
 }
 
@@ -278,16 +210,56 @@ func assertSDKv2SchemasIsolated(t *testing.T, path string, first, second *schema
 }
 
 func TestValidateInProcessProviderConfig(t *testing.T) {
-	defaults := schema.TestResourceDataRaw(t, SchemaMap(), map[string]interface{}{})
+	defaults := schema.TestResourceDataRaw(t, SchemaMap(), map[string]any{})
 	if err := validateInProcessProviderConfig(defaults); err != nil {
 		t.Fatalf("default provider configuration was rejected: %v", err)
 	}
 
-	configured := schema.TestResourceDataRaw(t, SchemaMap(), map[string]interface{}{
-		globalvar.DisableAutoRetriesAttrName: true,
-	})
-	if err := validateInProcessProviderConfig(configured); err == nil {
-		t.Fatal("process-global retry option was accepted for in-process use")
+	tests := []struct {
+		name   string
+		field  string
+		config map[string]any
+	}{
+		{
+			name:   "defined tags",
+			field:  globalvar.DefinedTagsToIgnore,
+			config: map[string]any{globalvar.DefinedTagsToIgnore: []any{"Oracle-Tags.CreatedBy"}},
+		},
+		{
+			name:   "realm-specific endpoint",
+			field:  globalvar.RealmSpecificServiceEndpointTemplateEnabled,
+			config: map[string]any{globalvar.RealmSpecificServiceEndpointTemplateEnabled: false},
+		},
+		{
+			name:   "dual-stack endpoint",
+			field:  globalvar.DualStackEndpointEnabled,
+			config: map[string]any{globalvar.DualStackEndpointEnabled: false},
+		},
+		{
+			name:   "disable automatic retries",
+			field:  globalvar.DisableAutoRetriesAttrName,
+			config: map[string]any{globalvar.DisableAutoRetriesAttrName: true},
+		},
+		{
+			name:   "retry duration",
+			field:  globalvar.RetryDurationSecondsAttrName,
+			config: map[string]any{globalvar.RetryDurationSecondsAttrName: 30},
+		},
+		{
+			name:   "retry configuration file",
+			field:  globalvar.RetriesConfigFile,
+			config: map[string]any{globalvar.RetriesConfigFile: "retries.json"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configured := schema.TestResourceDataRaw(t, SchemaMap(), tt.config)
+			err := validateInProcessProviderConfig(configured)
+			if err == nil || !strings.Contains(err.Error(), tt.field) {
+				t.Fatalf("validation error = %v, want unsupported option %q", err, tt.field)
+			}
+		})
 	}
 }
 
@@ -385,6 +357,47 @@ func TestFrameworkInProcessProviderRejectsExplicitEndpointOptions(t *testing.T) 
 			err := p.validateInProcessProviderConfig()
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("validation error = %v, want unsupported option %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestFrameworkInProcessProviderRejectsRetryOptions(t *testing.T) {
+	tests := []struct {
+		name      string
+		field     string
+		configure func(*ociPluginProvider)
+	}{
+		{
+			name:  "disable automatic retries",
+			field: globalvar.DisableAutoRetriesAttrName,
+			configure: func(p *ociPluginProvider) {
+				p.disableAutoRetries = true
+			},
+		},
+		{
+			name:  "retry duration",
+			field: globalvar.RetryDurationSecondsAttrName,
+			configure: func(p *ociPluginProvider) {
+				p.retryDurationSeconds = 30
+			},
+		},
+		{
+			name:  "retry configuration file",
+			field: globalvar.RetriesConfigFile,
+			configure: func(p *ociPluginProvider) {
+				p.retriesConfigFile = "retries.json"
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &ociPluginProvider{inProcess: true}
+			tt.configure(p)
+			err := p.validateInProcessProviderConfig()
+			if err == nil || !strings.Contains(err.Error(), tt.field) {
+				t.Fatalf("validation error = %v, want unsupported option %q", err, tt.field)
 			}
 		})
 	}

@@ -395,43 +395,22 @@ func (p *ociPluginProvider) setIgnoreDefinedTags(ctx context.Context, value type
 }
 
 func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
-	//tf_resource.DefinedTagsToSuppress = IgnoreDefinedTags(req)
 	if p.inProcess {
 		if err := p.validateInProcessProviderConfig(); err != nil {
 			return nil, err
 		}
-	} else {
-		tf_resource.RealmSpecificServiceEndpointTemplateEnabled = p.realmSpecificServiceEndpointTemplateEnabled
-		tf_resource.DualStackEndpointTemplateEnabled = p.dualStackEndpointEnabled
+	} else if err := p.setTerraformCLIProcessGlobals(); err != nil {
+		return nil, err
 	}
 
+	sdkClientCapacity := len(tf_client.OracleClientRegistrationsVar.RegisteredClients)
+	if p.inProcess {
+		// In-process clients are initialized lazily; reserve space only as used.
+		sdkClientCapacity = 0
+	}
 	clients := &tf_client.OracleClients{
-		SdkClientMap:  make(map[string]interface{}),
+		SdkClientMap:  make(map[string]interface{}, sdkClientCapacity),
 		Configuration: make(map[string]string),
-	}
-
-	disableAutoRetries := p.disableAutoRetries
-
-	retryDurationSeconds := p.retryDurationSeconds
-
-	if !p.inProcess && disableAutoRetries {
-		tf_resource.ShortRetryTime = 0
-		tf_resource.LongRetryTime = 0
-	} else if !p.inProcess && retryDurationSeconds > 0 {
-		val := time.Duration(retryDurationSeconds) * time.Second
-		if retryDurationSeconds < 0 {
-			// Retry for maximum amount of time, if a negative value was specified
-			val = time.Duration(globalvar.MaxInt64)
-		}
-		tf_resource.ConfiguredRetryDuration = &val
-	}
-
-	retriesConfigFile := p.retriesConfigFile
-	if !p.inProcess && len(retriesConfigFile) > 0 {
-		err := tf_resource.SetRetriesConfig(retriesConfigFile)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	sdkConfigProvider, err := p._GetSdkConfigProvider(clients)
@@ -455,11 +434,37 @@ func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
 		return nil, err
 	}
 
-	if !p.inProcess {
-		AvoidWaitingForDeleteTarget, _ = strconv.ParseBool(utils.GetEnvSettingWithDefault("avoid_waiting_for_delete_target", "false"))
+	return clients, nil
+}
+
+// setTerraformCLIProcessGlobals preserves the legacy Terraform CLI
+// configuration path. These settings remain process-global and must not be
+// applied when multiple provider instances are embedded in the same process.
+func (p *ociPluginProvider) setTerraformCLIProcessGlobals() error {
+	tf_resource.RealmSpecificServiceEndpointTemplateEnabled = p.realmSpecificServiceEndpointTemplateEnabled
+	tf_resource.DualStackEndpointTemplateEnabled = p.dualStackEndpointEnabled
+
+	disableAutoRetries := p.disableAutoRetries
+	retryDurationSeconds := p.retryDurationSeconds
+	if disableAutoRetries {
+		tf_resource.ShortRetryTime = 0
+		tf_resource.LongRetryTime = 0
+	} else if retryDurationSeconds > 0 {
+		val := time.Duration(retryDurationSeconds) * time.Second
+		if retryDurationSeconds < 0 {
+			// Retry for maximum amount of time, if a negative value was specified
+			val = time.Duration(globalvar.MaxInt64)
+		}
+		tf_resource.ConfiguredRetryDuration = &val
 	}
 
-	return clients, nil
+	if len(p.retriesConfigFile) > 0 {
+		if err := tf_resource.SetRetriesConfig(p.retriesConfigFile); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (p *ociPluginProvider) validateInProcessProviderConfig() error {
