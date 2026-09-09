@@ -199,6 +199,7 @@ func createPsqlBackupWithContext(ctx context.Context, d *schema.ResourceData, m 
 	sync := &PsqlBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).PostgresqlClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 
 	return tfresource.HandleDiagError(m, tfresource.CreateResourceWithContext(ctx, d, sync))
 }
@@ -207,6 +208,7 @@ func readPsqlBackupWithContext(ctx context.Context, d *schema.ResourceData, m in
 	sync := &PsqlBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).PostgresqlClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 
 	return tfresource.HandleDiagError(m, tfresource.ReadResourceWithContext(ctx, sync))
 }
@@ -215,6 +217,7 @@ func updatePsqlBackupWithContext(ctx context.Context, d *schema.ResourceData, m 
 	sync := &PsqlBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).PostgresqlClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 
 	return tfresource.HandleDiagError(m, tfresource.UpdateResourceWithContext(ctx, d, sync))
 }
@@ -223,6 +226,7 @@ func deletePsqlBackupWithContext(ctx context.Context, d *schema.ResourceData, m 
 	sync := &PsqlBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).PostgresqlClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.DisableNotFoundRetries = true
 
 	return tfresource.HandleDiagError(m, tfresource.DeleteResourceWithContext(ctx, d, sync))
@@ -231,6 +235,7 @@ func deletePsqlBackupWithContext(ctx context.Context, d *schema.ResourceData, m 
 type PsqlBackupResourceCrud struct {
 	tfresource.BaseCrud
 	Client                 *oci_psql.PostgresqlClient
+	ConfigureClient        client.ConfigureClient
 	SourceRegionClient     *oci_psql.PostgresqlClient
 	Res                    *oci_psql.Backup
 	DisableNotFoundRetries bool

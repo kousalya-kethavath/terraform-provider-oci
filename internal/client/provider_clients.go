@@ -38,8 +38,6 @@ func RegisterOracleClient(name string, client *OracleClient) {
 
 type ConfigureClient func(client *oci_common.BaseClient) error
 
-var ConfigureClientVar ConfigureClient // global fn ref used to configure all clients initially and others later on
-
 type InitSdkClientFn func(oci_common.ConfigurationProvider, ConfigureClient, ServiceClientOverrides) (interface{}, error)
 
 type OracleClientRegistrations struct {
@@ -58,10 +56,20 @@ type OracleClients struct {
 	Configuration     map[string]string
 	SdkClientMap      map[string]interface{}
 	WorkRequestClient *oci_work_requests.WorkRequestClient
+	configureClient   ConfigureClient
 }
 
 func (m *OracleClients) GetClient(name string) interface{} {
 	return m.SdkClientMap[name]
+}
+
+// ConfigureBaseClient applies the configuration captured by this provider
+// instance to a client created after the initial provider configuration.
+func (m *OracleClients) ConfigureBaseClient(client *oci_common.BaseClient) error {
+	if m == nil || m.configureClient == nil {
+		return fmt.Errorf("cannot configure OCI client: no configure client is registered")
+	}
+	return m.configureClient(client)
 }
 
 // The following clients require special endpoint information that is only known at Terraform apply time; so they
@@ -69,7 +77,7 @@ func (m *OracleClients) GetClient(name string) interface{} {
 // here.
 func (m *OracleClients) FunctionsInvokeClientWithEndpoint(endpoint string) (*oci_functions.FunctionsInvokeClient, error) {
 	if client, err := oci_functions.NewFunctionsInvokeClientWithConfigurationProvider(*m.FunctionsInvokeClient().ConfigurationProvider(), endpoint); err == nil {
-		if err = ConfigureClientVar(&client.BaseClient); err != nil {
+		if err = m.ConfigureBaseClient(&client.BaseClient); err != nil {
 			return nil, err
 		}
 		return &client, nil
@@ -79,7 +87,7 @@ func (m *OracleClients) FunctionsInvokeClientWithEndpoint(endpoint string) (*oci
 }
 func (m *OracleClients) KmsCryptoClientWithEndpoint(endpoint string) (*oci_kms.KmsCryptoClient, error) {
 	if client, err := oci_kms.NewKmsCryptoClientWithConfigurationProvider(*m.KmsCryptoClient().ConfigurationProvider(), endpoint); err == nil {
-		if err = ConfigureClientVar(&client.BaseClient); err != nil {
+		if err = m.ConfigureBaseClient(&client.BaseClient); err != nil {
 			return nil, err
 		}
 		return &client, nil
@@ -90,7 +98,7 @@ func (m *OracleClients) KmsCryptoClientWithEndpoint(endpoint string) (*oci_kms.K
 
 func (m *OracleClients) KmsManagementClientWithEndpoint(endpoint string) (*oci_kms.KmsManagementClient, error) {
 	if client, err := oci_kms.NewKmsManagementClientWithConfigurationProvider(*m.KmsManagementClient().ConfigurationProvider(), endpoint); err == nil {
-		if err = ConfigureClientVar(&client.BaseClient); err != nil {
+		if err = m.ConfigureBaseClient(&client.BaseClient); err != nil {
 			return nil, err
 		}
 		return &client, nil
@@ -101,7 +109,7 @@ func (m *OracleClients) KmsManagementClientWithEndpoint(endpoint string) (*oci_k
 
 func (m *OracleClients) IdentityDomainsClientWithEndpoint(endpoint string) (*oci_identity_domains.IdentityDomainsClient, error) {
 	if client, err := oci_identity_domains.NewIdentityDomainsClientWithConfigurationProvider(*m.IdentityDomainsClient().ConfigurationProvider(), endpoint); err == nil {
-		if err = ConfigureClientVar(&client.BaseClient); err != nil {
+		if err = m.ConfigureBaseClient(&client.BaseClient); err != nil {
 			return nil, err
 		}
 		return &client, nil
@@ -130,6 +138,8 @@ func getClientHostOverrides() map[string]string {
 }
 
 func CreateSDKClients(clients *OracleClients, configProvider oci_common.ConfigurationProvider, configureClient ConfigureClient) (err error) {
+	clients.configureClient = configureClient
+
 	if OracleClientRegistrationsVar == nil || len(OracleClientRegistrationsVar.RegisteredClients) == 0 {
 		return fmt.Errorf("there are no clients to Create")
 	}

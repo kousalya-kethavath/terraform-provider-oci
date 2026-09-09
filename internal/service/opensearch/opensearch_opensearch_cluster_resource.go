@@ -1058,25 +1058,25 @@ func (s *OpensearchOpensearchClusterResourceCrud) Create() error {
 			}
 		}
 	}
-	return s.getOpensearchClusterFromWorkRequest(workId, tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch"), oci_opensearch.ActionTypeCreated, s.D.Timeout(schema.TimeoutCreate))
+	return s.getOpensearchClusterFromWorkRequest(workId, oci_opensearch.ActionTypeCreated, s.D.Timeout(schema.TimeoutCreate))
 }
 
-func (s *OpensearchOpensearchClusterResourceCrud) getOpensearchClusterFromWorkRequest(workId *string, retryPolicy *oci_common.RetryPolicy,
-	actionTypeEnum oci_opensearch.ActionTypeEnum, timeout time.Duration) error {
+func (s *OpensearchOpensearchClusterResourceCrud) getOpensearchClusterFromWorkRequest(workId *string,
+	actionTypeEnum oci_opensearch.ActionTypeEnum, timeout time.Duration, retryPolicyOptionals ...any) error {
 
 	// Wait until it finishes
 	opensearchClusterId, err := opensearchClusterWaitForWorkRequest(workId, "opensearch",
-		actionTypeEnum, timeout, s.DisableNotFoundRetries, s.Client)
+		actionTypeEnum, timeout, s.DisableNotFoundRetries, s.Client, retryPolicyOptionals...)
 
 	if err != nil {
 		return err
 	}
 	s.D.SetId(*opensearchClusterId)
 
-	return s.Get()
+	return s.get(retryPolicyOptionals...)
 }
 
-func opensearchClusterWorkRequestShouldRetryFunc(timeout time.Duration) func(response oci_common.OCIOperationResponse) bool {
+func opensearchClusterWorkRequestShouldRetryFunc(timeout time.Duration, retryPolicyOptionals ...any) func(response oci_common.OCIOperationResponse) bool {
 	startTime := time.Now()
 	stopTime := startTime.Add(timeout)
 	return func(response oci_common.OCIOperationResponse) bool {
@@ -1087,7 +1087,7 @@ func opensearchClusterWorkRequestShouldRetryFunc(timeout time.Duration) func(res
 		}
 
 		// Make sure we stop on default rules
-		if tfresource.ShouldRetry(response, false, "opensearch", startTime) {
+		if tfresource.ShouldRetry(response, false, "opensearch", startTime, retryPolicyOptionals...) {
 			return true
 		}
 
@@ -1100,9 +1100,9 @@ func opensearchClusterWorkRequestShouldRetryFunc(timeout time.Duration) func(res
 }
 
 func opensearchClusterWaitForWorkRequest(wId *string, entityType string, action oci_opensearch.ActionTypeEnum,
-	timeout time.Duration, disableFoundRetries bool, client *oci_opensearch.OpensearchClusterClient) (*string, error) {
-	retryPolicy := tfresource.GetRetryPolicy(disableFoundRetries, "opensearch")
-	retryPolicy.ShouldRetryOperation = opensearchClusterWorkRequestShouldRetryFunc(timeout)
+	timeout time.Duration, disableFoundRetries bool, client *oci_opensearch.OpensearchClusterClient, retryPolicyOptionals ...any) (*string, error) {
+	retryPolicy := tfresource.GetRetryPolicy(disableFoundRetries, "opensearch", retryPolicyOptionals...)
+	retryPolicy.ShouldRetryOperation = opensearchClusterWorkRequestShouldRetryFunc(timeout, retryPolicyOptionals...)
 
 	response := oci_opensearch.GetWorkRequestResponse{}
 	stateConf := &retry.StateChangeConf{
@@ -1177,12 +1177,16 @@ func getErrorFromOpensearchOpensearchClusterWorkRequest(client *oci_opensearch.O
 }
 
 func (s *OpensearchOpensearchClusterResourceCrud) Get() error {
+	return s.get()
+}
+
+func (s *OpensearchOpensearchClusterResourceCrud) get(retryPolicyOptionals ...any) error {
 	request := oci_opensearch.GetOpensearchClusterRequest{}
 
 	tmp := s.D.Id()
 	request.OpensearchClusterId = &tmp
 
-	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch")
+	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch", retryPolicyOptionals...)
 
 	response, err := s.Client.GetOpensearchCluster(context.Background(), request)
 	if err != nil {
@@ -1463,7 +1467,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) Update() error {
 	}
 
 	workId := response.OpcWorkRequestId
-	return s.getOpensearchClusterFromWorkRequest(workId, tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch"), oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate))
+	return s.getOpensearchClusterFromWorkRequest(workId, oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate))
 }
 
 func (s *OpensearchOpensearchClusterResourceCrud) Delete() error {
@@ -1845,10 +1849,10 @@ func (s *OpensearchOpensearchClusterResourceCrud) UpgradeOpenSearchCluster() err
 	s.D.Set("upgrade_major_version_trigger", val)
 
 	workId := response.OpcWorkRequestId
-	return s.getOpensearchClusterFromWorkRequest(workId, tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch"), oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate))
+	return s.getOpensearchClusterFromWorkRequest(workId, oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate))
 }
 func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterHorizontal() error {
-	tfresource.ShortRetryTime = tfresource.LongRetryTime * 5
+	retryDuration := tfresource.NewOperationRetryDurationOverride(tfresource.LongRetryTime * 5)
 	request := oci_opensearch.ResizeOpensearchClusterHorizontalRequest{}
 
 	if coordinatorNodeCount, ok := s.D.GetOkExists("coordinator_node_count"); ok {
@@ -1884,7 +1888,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterHorizon
 		request.SearchNodeCount = &tmp
 	}
 
-	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch")
+	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch", retryDuration)
 
 	response, err := s.Client.ResizeOpensearchClusterHorizontal(context.Background(), request)
 	if err != nil {
@@ -1892,11 +1896,11 @@ func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterHorizon
 	}
 
 	workId := response.OpcWorkRequestId
-	return s.getOpensearchClusterFromWorkRequest(workId, tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch"), oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate))
+	return s.getOpensearchClusterFromWorkRequest(workId, oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate), retryDuration)
 }
 
 func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterVertical() error {
-	tfresource.ShortRetryTime = tfresource.LongRetryTime * 5
+	retryDuration := tfresource.NewOperationRetryDurationOverride(tfresource.LongRetryTime * 5)
 	request := oci_opensearch.ResizeOpensearchClusterVerticalRequest{}
 
 	if coordinatorNodeHostMemoryGB, ok := s.D.GetOkExists("coordinator_node_host_memory_gb"); ok {
@@ -2007,7 +2011,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterVertica
 		request.SearchNodeStorageGB = &tmp
 	}
 
-	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch")
+	request.RequestMetadata.RetryPolicy = tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch", retryDuration)
 
 	response, err := s.Client.ResizeOpensearchClusterVertical(context.Background(), request)
 	if err != nil {
@@ -2015,7 +2019,7 @@ func (s *OpensearchOpensearchClusterResourceCrud) ResizeOpensearchClusterVertica
 	}
 
 	workId := response.OpcWorkRequestId
-	return s.getOpensearchClusterFromWorkRequest(workId, tfresource.GetRetryPolicy(s.DisableNotFoundRetries, "opensearch"), oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate))
+	return s.getOpensearchClusterFromWorkRequest(workId, oci_opensearch.ActionTypeUpdated, s.D.Timeout(schema.TimeoutUpdate), retryDuration)
 }
 
 func (s *OpensearchOpensearchClusterResourceCrud) mapToCreateMaintenanceDetails(fieldKeyFormat string) (oci_opensearch.CreateMaintenanceDetails, error) {

@@ -207,6 +207,7 @@ func createCoreVolumeBackupWithContext(ctx context.Context, d *schema.ResourceDa
 	sync := &CoreVolumeBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.workRequestClient = m.(*client.OracleClients).WorkRequestClient
 
 	compartment, ok := sync.D.GetOkExists("compartment_id")
@@ -239,6 +240,7 @@ func readCoreVolumeBackupWithContext(ctx context.Context, d *schema.ResourceData
 	sync := &CoreVolumeBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.workRequestClient = m.(*client.OracleClients).WorkRequestClient
 
 	return tfresource.HandleDiagError(m, tfresource.ReadResourceWithContext(ctx, sync))
@@ -248,6 +250,7 @@ func updateCoreVolumeBackupWithContext(ctx context.Context, d *schema.ResourceDa
 	sync := &CoreVolumeBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.workRequestClient = m.(*client.OracleClients).WorkRequestClient
 
 	return tfresource.HandleDiagError(m, tfresource.UpdateResourceWithContext(ctx, d, sync))
@@ -257,6 +260,7 @@ func deleteCoreVolumeBackupWithContext(ctx context.Context, d *schema.ResourceDa
 	sync := &CoreVolumeBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.workRequestClient = m.(*client.OracleClients).WorkRequestClient
 	sync.DisableNotFoundRetries = true
 
@@ -266,6 +270,7 @@ func deleteCoreVolumeBackupWithContext(ctx context.Context, d *schema.ResourceDa
 type CoreVolumeBackupResourceCrud struct {
 	tfresource.BaseCrud
 	Client                 *oci_core.BlockstorageClient
+	ConfigureClient        client.ConfigureClient
 	SourceRegionClient     *oci_core.BlockstorageClient
 	workRequestClient      *oci_work_requests.WorkRequestClient
 	Res                    *oci_core.VolumeBackup

@@ -202,6 +202,7 @@ func createCoreBootVolumeBackupWithContext(ctx context.Context, d *schema.Resour
 	sync := &CoreBootVolumeBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.workRequestClient = m.(*client.OracleClients).WorkRequestClient
 
 	compartment, ok := sync.D.GetOkExists("compartment_id")
@@ -234,6 +235,7 @@ func readCoreBootVolumeBackupWithContext(ctx context.Context, d *schema.Resource
 	sync := &CoreBootVolumeBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.workRequestClient = m.(*client.OracleClients).WorkRequestClient
 
 	return tfresource.HandleDiagError(m, tfresource.ReadResourceWithContext(ctx, sync))
@@ -243,6 +245,7 @@ func updateCoreBootVolumeBackupWithContext(ctx context.Context, d *schema.Resour
 	sync := &CoreBootVolumeBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.workRequestClient = m.(*client.OracleClients).WorkRequestClient
 
 	return tfresource.HandleDiagError(m, tfresource.UpdateResourceWithContext(ctx, d, sync))
@@ -252,6 +255,7 @@ func deleteCoreBootVolumeBackupWithContext(ctx context.Context, d *schema.Resour
 	sync := &CoreBootVolumeBackupResourceCrud{}
 	sync.D = d
 	sync.Client = m.(*client.OracleClients).BlockstorageClient()
+	sync.ConfigureClient = m.(*client.OracleClients).ConfigureBaseClient
 	sync.workRequestClient = m.(*client.OracleClients).WorkRequestClient
 	sync.DisableNotFoundRetries = true
 
@@ -261,6 +265,7 @@ func deleteCoreBootVolumeBackupWithContext(ctx context.Context, d *schema.Resour
 type CoreBootVolumeBackupResourceCrud struct {
 	tfresource.BaseCrud
 	Client                 *oci_core.BlockstorageClient
+	ConfigureClient        client.ConfigureClient
 	SourceRegionClient     *oci_core.BlockstorageClient
 	workRequestClient      *oci_work_requests.WorkRequestClient
 	Res                    *oci_core.BootVolumeBackup
