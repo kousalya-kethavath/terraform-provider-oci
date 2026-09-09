@@ -4,22 +4,20 @@ import (
 	"fmt"
 
 	oci_mysql "github.com/oracle/oci-go-sdk/v65/mysql"
-	tf_client "github.com/oracle/terraform-provider-oci/internal/client"
 )
 
-func (s *MysqlMysqlBackupResourceCrud) createDbBackupClientInRegion(region string) error {
+func (s *MysqlMysqlBackupResourceCrud) createDbBackupClientInRegion(region string) (*oci_mysql.DbBackupsClient, error) {
 	if s.Client == nil {
-		dbBackupClient, err := oci_mysql.NewDbBackupsClientWithConfigurationProvider(*s.Client.ConfigurationProvider())
-		if err != nil {
-			return fmt.Errorf("cannot Create client for the region: %v", err)
-		}
-		err = tf_client.ConfigureClientVar(&dbBackupClient.BaseClient)
-		if err != nil {
-			return fmt.Errorf("cannot configure client for the region: %v", err)
-		}
-		s.Client = &dbBackupClient
+		return nil, fmt.Errorf("cannot create MySQL backup client for region %q: primary client is nil", region)
 	}
-	s.Client.SetRegion(region)
 
-	return nil
+	dbBackupClient, err := oci_mysql.NewDbBackupsClientWithConfigurationProvider(*s.Client.ConfigurationProvider())
+	if err != nil {
+		return nil, fmt.Errorf("cannot create MySQL backup client for region %q: %w", region, err)
+	}
+	if err := s.ConfigureClient(&dbBackupClient.BaseClient); err != nil {
+		return nil, fmt.Errorf("cannot configure MySQL backup client for region %q: %w", region, err)
+	}
+	dbBackupClient.SetRegion(region)
+	return &dbBackupClient, nil
 }
