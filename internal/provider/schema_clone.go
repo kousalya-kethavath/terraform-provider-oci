@@ -4,11 +4,14 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	tfclient "github.com/oracle/terraform-provider-oci/internal/client"
 )
 
 // cloneSDKv2ResourceMap returns an isolated copy of an SDKv2 resource map.
@@ -50,6 +53,7 @@ func cloneSDKv2Resource(source *schema.Resource) *schema.Resource {
 	}
 
 	result := *source
+	wrapSDKv2ResourceCallbacks(&result)
 	result.Schema = cloneSDKv2SchemaMap(source.Schema)
 	if source.SchemaFunc != nil {
 		schemaFunc := source.SchemaFunc
@@ -73,11 +77,107 @@ func cloneSDKv2Resource(source *schema.Resource) *schema.Resource {
 	}
 	if source.Importer != nil {
 		importer := *source.Importer
+		if importer.State != nil {
+			callback := importer.State
+			importer.State = func(data *schema.ResourceData, meta interface{}) (state []*schema.ResourceData, err error) {
+				defer recoverLazyClientInitializationError(&err)
+				return callback(data, meta)
+			}
+		}
+		if importer.StateContext != nil {
+			callback := importer.StateContext
+			importer.StateContext = func(ctx context.Context, data *schema.ResourceData, meta interface{}) (state []*schema.ResourceData, err error) {
+				defer recoverLazyClientInitializationError(&err)
+				return callback(ctx, data, meta)
+			}
+		}
 		result.Importer = &importer
 	}
 	result.Timeouts = cloneSDKv2ResourceTimeout(source.Timeouts)
 
 	return &result
+}
+
+func wrapSDKv2ResourceCallbacks(resource *schema.Resource) {
+	if resource.Create != nil {
+		callback := resource.Create
+		resource.Create = func(data *schema.ResourceData, meta interface{}) (err error) {
+			defer recoverLazyClientInitializationError(&err)
+			return callback(data, meta)
+		}
+	}
+	if resource.Read != nil {
+		callback := resource.Read
+		resource.Read = func(data *schema.ResourceData, meta interface{}) (err error) {
+			defer recoverLazyClientInitializationError(&err)
+			return callback(data, meta)
+		}
+	}
+	if resource.Update != nil {
+		callback := resource.Update
+		resource.Update = func(data *schema.ResourceData, meta interface{}) (err error) {
+			defer recoverLazyClientInitializationError(&err)
+			return callback(data, meta)
+		}
+	}
+	if resource.Delete != nil {
+		callback := resource.Delete
+		resource.Delete = func(data *schema.ResourceData, meta interface{}) (err error) {
+			defer recoverLazyClientInitializationError(&err)
+			return callback(data, meta)
+		}
+	}
+	if resource.Exists != nil {
+		callback := resource.Exists
+		resource.Exists = func(data *schema.ResourceData, meta interface{}) (exists bool, err error) {
+			defer recoverLazyClientInitializationError(&err)
+			return callback(data, meta)
+		}
+	}
+	if resource.CustomizeDiff != nil {
+		callback := resource.CustomizeDiff
+		resource.CustomizeDiff = func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) (err error) {
+			defer recoverLazyClientInitializationError(&err)
+			return callback(ctx, diff, meta)
+		}
+	}
+
+	resource.CreateContext = wrapSDKv2ContextCallback(resource.CreateContext)
+	resource.ReadContext = wrapSDKv2ContextCallback(resource.ReadContext)
+	resource.UpdateContext = wrapSDKv2ContextCallback(resource.UpdateContext)
+	resource.DeleteContext = wrapSDKv2ContextCallback(resource.DeleteContext)
+	resource.CreateWithoutTimeout = wrapSDKv2ContextCallback(resource.CreateWithoutTimeout)
+	resource.ReadWithoutTimeout = wrapSDKv2ContextCallback(resource.ReadWithoutTimeout)
+	resource.UpdateWithoutTimeout = wrapSDKv2ContextCallback(resource.UpdateWithoutTimeout)
+	resource.DeleteWithoutTimeout = wrapSDKv2ContextCallback(resource.DeleteWithoutTimeout)
+}
+
+func wrapSDKv2ContextCallback[T ~func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics](callback T) T {
+	if callback == nil {
+		return nil
+	}
+	return T(func(ctx context.Context, data *schema.ResourceData, meta interface{}) (diagnostics diag.Diagnostics) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				if err, ok := recovered.(*tfclient.LazyClientInitializationError); ok {
+					diagnostics = append(diagnostics, diag.Diagnostic{Severity: diag.Error, Summary: err.Error()})
+					return
+				}
+				panic(recovered)
+			}
+		}()
+		return callback(ctx, data, meta)
+	})
+}
+
+func recoverLazyClientInitializationError(result *error) {
+	if recovered := recover(); recovered != nil {
+		if err, ok := recovered.(*tfclient.LazyClientInitializationError); ok {
+			*result = err
+			return
+		}
+		panic(recovered)
+	}
 }
 
 func cloneSDKv2SchemaMap(source map[string]*schema.Schema) map[string]*schema.Schema {
