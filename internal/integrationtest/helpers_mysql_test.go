@@ -25,7 +25,7 @@ func createDbSystemInRegion(clients *tf_client.OracleClients, region string) (st
 		return "", fmt.Errorf("cannot Create client for the region %s: %v", region, err)
 	}
 
-	err = tf_client.ConfigureClientVar(&dbSystemClient.BaseClient)
+	err = clients.ConfigureBaseClient(&dbSystemClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the region: %v", err)
 	}
@@ -37,7 +37,7 @@ func createDbSystemInRegion(clients *tf_client.OracleClients, region string) (st
 		return "", fmt.Errorf("cannot Create client for the region %s: %v", region, err)
 	}
 
-	err = tf_client.ConfigureClientVar(&identityClient.BaseClient)
+	err = clients.ConfigureBaseClient(&identityClient.BaseClient)
 	if err != nil {
 		return "", fmt.Errorf("cannot configure client for the region: %v", err)
 	}
@@ -173,7 +173,7 @@ func deleteDbSystemInRegion(clients *tf_client.OracleClients, region string, mys
 		return fmt.Errorf("cannot Create client for the region %s: %v", region, err)
 	}
 
-	err = tf_client.ConfigureClientVar(&dbSystemClient.BaseClient)
+	err = clients.ConfigureBaseClient(&dbSystemClient.BaseClient)
 	if err != nil {
 		return fmt.Errorf("cannot configure client for the region: %v", err)
 	}
@@ -226,7 +226,7 @@ func initializeDbBackupsClientWithConfigurationProvider(clients *tf_client.Oracl
 		return nil, fmt.Errorf("cannot create client for the region %s: %v", region, err)
 	}
 
-	err = tf_client.ConfigureClientVar(&dbBackupsClient.BaseClient)
+	err = clients.ConfigureBaseClient(&dbBackupsClient.BaseClient)
 	if err != nil {
 		return nil, fmt.Errorf("cannot configure client for the region: %v", err)
 	}
