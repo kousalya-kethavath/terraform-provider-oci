@@ -6,10 +6,10 @@ package opensearch
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_opensearch_opensearch_cluster", OpensearchOpensearchClusterDataSource())
-	tfresource.RegisterDatasource("oci_opensearch_opensearch_cluster_pipeline", OpensearchOpensearchClusterPipelineDataSource())
-	tfresource.RegisterDatasource("oci_opensearch_opensearch_cluster_pipelines", OpensearchOpensearchClusterPipelinesDataSource())
-	tfresource.RegisterDatasource("oci_opensearch_opensearch_clusters", OpensearchOpensearchClustersDataSource())
-	tfresource.RegisterDatasource("oci_opensearch_opensearch_version", OpensearchOpensearchVersionDataSource())
-	tfresource.RegisterDatasource("oci_opensearch_opensearch_versions", OpensearchOpensearchVersionsDataSource())
+	tfresource.RegisterDatasource("oci_opensearch_opensearch_cluster", OpensearchOpensearchClusterDataSource)
+	tfresource.RegisterDatasource("oci_opensearch_opensearch_cluster_pipeline", OpensearchOpensearchClusterPipelineDataSource)
+	tfresource.RegisterDatasource("oci_opensearch_opensearch_cluster_pipelines", OpensearchOpensearchClusterPipelinesDataSource)
+	tfresource.RegisterDatasource("oci_opensearch_opensearch_clusters", OpensearchOpensearchClustersDataSource)
+	tfresource.RegisterDatasource("oci_opensearch_opensearch_version", OpensearchOpensearchVersionDataSource)
+	tfresource.RegisterDatasource("oci_opensearch_opensearch_versions", OpensearchOpensearchVersionsDataSource)
 }

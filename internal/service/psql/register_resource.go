@@ -6,7 +6,7 @@ package psql
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_psql_backup", PsqlBackupResource())
-	tfresource.RegisterResource("oci_psql_configuration", PsqlConfigurationResource())
-	tfresource.RegisterResource("oci_psql_db_system", PsqlDbSystemResource())
+	tfresource.RegisterResource("oci_psql_backup", PsqlBackupResource)
+	tfresource.RegisterResource("oci_psql_configuration", PsqlConfigurationResource)
+	tfresource.RegisterResource("oci_psql_db_system", PsqlDbSystemResource)
 }

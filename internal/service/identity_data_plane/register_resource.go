@@ -6,5 +6,5 @@ package identity_data_plane
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_identity_data_plane_generate_scoped_access_token", IdentityDataPlaneGenerateScopedAccessTokenResource())
+	tfresource.RegisterResource("oci_identity_data_plane_generate_scoped_access_token", IdentityDataPlaneGenerateScopedAccessTokenResource)
 }

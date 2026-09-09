@@ -6,9 +6,9 @@ package nosql
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_nosql_configuration", NosqlConfigurationDataSource())
-	tfresource.RegisterDatasource("oci_nosql_index", NosqlIndexDataSource())
-	tfresource.RegisterDatasource("oci_nosql_indexes", NosqlIndexesDataSource())
-	tfresource.RegisterDatasource("oci_nosql_table", NosqlTableDataSource())
-	tfresource.RegisterDatasource("oci_nosql_tables", NosqlTablesDataSource())
+	tfresource.RegisterDatasource("oci_nosql_configuration", NosqlConfigurationDataSource)
+	tfresource.RegisterDatasource("oci_nosql_index", NosqlIndexDataSource)
+	tfresource.RegisterDatasource("oci_nosql_indexes", NosqlIndexesDataSource)
+	tfresource.RegisterDatasource("oci_nosql_table", NosqlTableDataSource)
+	tfresource.RegisterDatasource("oci_nosql_tables", NosqlTablesDataSource)
 }

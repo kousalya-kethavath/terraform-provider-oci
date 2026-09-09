@@ -6,6 +6,6 @@ package events
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_events_rule", EventsRuleDataSource())
-	tfresource.RegisterDatasource("oci_events_rules", EventsRulesDataSource())
+	tfresource.RegisterDatasource("oci_events_rule", EventsRuleDataSource)
+	tfresource.RegisterDatasource("oci_events_rules", EventsRulesDataSource)
 }

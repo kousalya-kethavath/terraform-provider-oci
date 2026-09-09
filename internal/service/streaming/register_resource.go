@@ -6,7 +6,7 @@ package streaming
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_streaming_connect_harness", StreamingConnectHarnessResource())
-	tfresource.RegisterResource("oci_streaming_stream", StreamingStreamResource())
-	tfresource.RegisterResource("oci_streaming_stream_pool", StreamingStreamPoolResource())
+	tfresource.RegisterResource("oci_streaming_connect_harness", StreamingConnectHarnessResource)
+	tfresource.RegisterResource("oci_streaming_stream", StreamingStreamResource)
+	tfresource.RegisterResource("oci_streaming_stream_pool", StreamingStreamPoolResource)
 }

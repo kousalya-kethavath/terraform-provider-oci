@@ -6,5 +6,5 @@ package self
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_self_subscription", SelfSubscriptionResource())
+	tfresource.RegisterResource("oci_self_subscription", SelfSubscriptionResource)
 }

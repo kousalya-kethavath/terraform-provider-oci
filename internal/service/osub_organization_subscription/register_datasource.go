@@ -6,5 +6,5 @@ package osub_organization_subscription
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_osub_organization_subscription_organization_subscriptions", OsubOrganizationSubscriptionOrganizationSubscriptionsDataSource())
+	tfresource.RegisterDatasource("oci_osub_organization_subscription_organization_subscriptions", OsubOrganizationSubscriptionOrganizationSubscriptionsDataSource)
 }

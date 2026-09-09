@@ -6,6 +6,6 @@ package waa
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_waa_web_app_acceleration", WaaWebAppAccelerationResource())
-	tfresource.RegisterResource("oci_waa_web_app_acceleration_policy", WaaWebAppAccelerationPolicyResource())
+	tfresource.RegisterResource("oci_waa_web_app_acceleration", WaaWebAppAccelerationResource)
+	tfresource.RegisterResource("oci_waa_web_app_acceleration_policy", WaaWebAppAccelerationPolicyResource)
 }

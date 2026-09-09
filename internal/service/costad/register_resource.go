@@ -6,8 +6,8 @@ package costad
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_costad_cost_alert_subscription", CostadCostAlertSubscriptionResource())
-	tfresource.RegisterResource("oci_costad_cost_anomaly_event", CostadCostAnomalyEventResource())
-	tfresource.RegisterResource("oci_costad_cost_anomaly_monitor", CostadCostAnomalyMonitorResource())
-	tfresource.RegisterResource("oci_costad_cost_anomaly_monitor_costanomalymonitorenabletoggles_management", CostadCostAnomalyMonitorCostanomalymonitorenabletogglesManagementResource())
+	tfresource.RegisterResource("oci_costad_cost_alert_subscription", CostadCostAlertSubscriptionResource)
+	tfresource.RegisterResource("oci_costad_cost_anomaly_event", CostadCostAnomalyEventResource)
+	tfresource.RegisterResource("oci_costad_cost_anomaly_monitor", CostadCostAnomalyMonitorResource)
+	tfresource.RegisterResource("oci_costad_cost_anomaly_monitor_costanomalymonitorenabletoggles_management", CostadCostAnomalyMonitorCostanomalymonitorenabletogglesManagementResource)
 }

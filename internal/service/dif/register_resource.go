@@ -6,5 +6,5 @@ package dif
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_dif_stack", DifStackResource())
+	tfresource.RegisterResource("oci_dif_stack", DifStackResource)
 }

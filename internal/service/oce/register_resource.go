@@ -6,5 +6,5 @@ package oce
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_oce_oce_instance", OceOceInstanceResource())
+	tfresource.RegisterResource("oci_oce_oce_instance", OceOceInstanceResource)
 }

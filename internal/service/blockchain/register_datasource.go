@@ -6,11 +6,11 @@ package blockchain
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_blockchain_blockchain_platform", BlockchainBlockchainPlatformDataSource())
-	tfresource.RegisterDatasource("oci_blockchain_blockchain_platform_patches", BlockchainBlockchainPlatformPatchesDataSource())
-	tfresource.RegisterDatasource("oci_blockchain_blockchain_platforms", BlockchainBlockchainPlatformsDataSource())
-	tfresource.RegisterDatasource("oci_blockchain_osn", BlockchainOsnDataSource())
-	tfresource.RegisterDatasource("oci_blockchain_osns", BlockchainOsnsDataSource())
-	tfresource.RegisterDatasource("oci_blockchain_peer", BlockchainPeerDataSource())
-	tfresource.RegisterDatasource("oci_blockchain_peers", BlockchainPeersDataSource())
+	tfresource.RegisterDatasource("oci_blockchain_blockchain_platform", BlockchainBlockchainPlatformDataSource)
+	tfresource.RegisterDatasource("oci_blockchain_blockchain_platform_patches", BlockchainBlockchainPlatformPatchesDataSource)
+	tfresource.RegisterDatasource("oci_blockchain_blockchain_platforms", BlockchainBlockchainPlatformsDataSource)
+	tfresource.RegisterDatasource("oci_blockchain_osn", BlockchainOsnDataSource)
+	tfresource.RegisterDatasource("oci_blockchain_osns", BlockchainOsnsDataSource)
+	tfresource.RegisterDatasource("oci_blockchain_peer", BlockchainPeerDataSource)
+	tfresource.RegisterDatasource("oci_blockchain_peers", BlockchainPeersDataSource)
 }

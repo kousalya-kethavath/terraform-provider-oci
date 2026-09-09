@@ -6,5 +6,5 @@ package osub_billing_schedule
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_osub_billing_schedule_billing_schedules", OsubBillingScheduleBillingSchedulesDataSource())
+	tfresource.RegisterDatasource("oci_osub_billing_schedule_billing_schedules", OsubBillingScheduleBillingSchedulesDataSource)
 }

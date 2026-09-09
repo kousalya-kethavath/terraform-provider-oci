@@ -6,7 +6,7 @@ package license_manager
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_license_manager_configuration", LicenseManagerConfigurationResource())
-	tfresource.RegisterResource("oci_license_manager_license_record", LicenseManagerLicenseRecordResource())
-	tfresource.RegisterResource("oci_license_manager_product_license", LicenseManagerProductLicenseResource())
+	tfresource.RegisterResource("oci_license_manager_configuration", LicenseManagerConfigurationResource)
+	tfresource.RegisterResource("oci_license_manager_license_record", LicenseManagerLicenseRecordResource)
+	tfresource.RegisterResource("oci_license_manager_product_license", LicenseManagerProductLicenseResource)
 }

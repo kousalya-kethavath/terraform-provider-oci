@@ -6,6 +6,6 @@ package appmgmt_control
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_appmgmt_control_monitored_instance", AppmgmtControlMonitoredInstanceDataSource())
-	tfresource.RegisterDatasource("oci_appmgmt_control_monitored_instances", AppmgmtControlMonitoredInstancesDataSource())
+	tfresource.RegisterDatasource("oci_appmgmt_control_monitored_instance", AppmgmtControlMonitoredInstanceDataSource)
+	tfresource.RegisterDatasource("oci_appmgmt_control_monitored_instances", AppmgmtControlMonitoredInstancesDataSource)
 }

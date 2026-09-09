@@ -6,6 +6,6 @@ package demand_signal
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_demand_signal_occ_demand_signal", DemandSignalOccDemandSignalResource())
-	tfresource.RegisterResource("oci_demand_signal_occ_metric_alarm", DemandSignalOccMetricAlarmResource())
+	tfresource.RegisterResource("oci_demand_signal_occ_demand_signal", DemandSignalOccDemandSignalResource)
+	tfresource.RegisterResource("oci_demand_signal_occ_metric_alarm", DemandSignalOccMetricAlarmResource)
 }

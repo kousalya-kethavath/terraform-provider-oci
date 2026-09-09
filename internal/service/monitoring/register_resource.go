@@ -6,6 +6,6 @@ package monitoring
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_monitoring_alarm", MonitoringAlarmResource())
-	tfresource.RegisterResource("oci_monitoring_alarm_suppression", MonitoringAlarmSuppressionResource())
+	tfresource.RegisterResource("oci_monitoring_alarm", MonitoringAlarmResource)
+	tfresource.RegisterResource("oci_monitoring_alarm_suppression", MonitoringAlarmSuppressionResource)
 }

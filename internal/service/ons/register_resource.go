@@ -6,6 +6,6 @@ package ons
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_ons_notification_topic", OnsNotificationTopicResource())
-	tfresource.RegisterResource("oci_ons_subscription", OnsSubscriptionResource())
+	tfresource.RegisterResource("oci_ons_notification_topic", OnsNotificationTopicResource)
+	tfresource.RegisterResource("oci_ons_subscription", OnsSubscriptionResource)
 }

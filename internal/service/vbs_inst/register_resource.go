@@ -6,5 +6,5 @@ package vbs_inst
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_vbs_inst_vbs_instance", VbsInstVbsInstanceResource())
+	tfresource.RegisterResource("oci_vbs_inst_vbs_instance", VbsInstVbsInstanceResource)
 }

@@ -6,7 +6,7 @@ package datacc
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_datacc_infrastructure", DataccInfrastructureResource())
-	tfresource.RegisterResource("oci_datacc_vm_cluster_network", DataccVmClusterNetworkResource())
-	tfresource.RegisterResource("oci_datacc_vm_instance", DataccVmInstanceResource())
+	tfresource.RegisterResource("oci_datacc_infrastructure", DataccInfrastructureResource)
+	tfresource.RegisterResource("oci_datacc_vm_cluster_network", DataccVmClusterNetworkResource)
+	tfresource.RegisterResource("oci_datacc_vm_instance", DataccVmInstanceResource)
 }

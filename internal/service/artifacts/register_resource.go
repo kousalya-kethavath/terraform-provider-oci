@@ -6,9 +6,9 @@ package artifacts
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_artifacts_container_configuration", ArtifactsContainerConfigurationResource())
-	tfresource.RegisterResource("oci_artifacts_container_image_signature", ArtifactsContainerImageSignatureResource())
-	tfresource.RegisterResource("oci_artifacts_container_repository", ArtifactsContainerRepositoryResource())
-	tfresource.RegisterResource("oci_artifacts_generic_artifact", ArtifactsGenericArtifactResource())
-	tfresource.RegisterResource("oci_artifacts_repository", ArtifactsRepositoryResource())
+	tfresource.RegisterResource("oci_artifacts_container_configuration", ArtifactsContainerConfigurationResource)
+	tfresource.RegisterResource("oci_artifacts_container_image_signature", ArtifactsContainerImageSignatureResource)
+	tfresource.RegisterResource("oci_artifacts_container_repository", ArtifactsContainerRepositoryResource)
+	tfresource.RegisterResource("oci_artifacts_generic_artifact", ArtifactsGenericArtifactResource)
+	tfresource.RegisterResource("oci_artifacts_repository", ArtifactsRepositoryResource)
 }

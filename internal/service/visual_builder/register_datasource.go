@@ -6,7 +6,7 @@ package visual_builder
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_visual_builder_vb_instance", VisualBuilderVbInstanceDataSource())
-	tfresource.RegisterDatasource("oci_visual_builder_vb_instances", VisualBuilderVbInstancesDataSource())
-	tfresource.RegisterDatasource("oci_visual_builder_vb_instance_applications", VisualBuilderVbInstanceApplicationsDataSource())
+	tfresource.RegisterDatasource("oci_visual_builder_vb_instance", VisualBuilderVbInstanceDataSource)
+	tfresource.RegisterDatasource("oci_visual_builder_vb_instances", VisualBuilderVbInstancesDataSource)
+	tfresource.RegisterDatasource("oci_visual_builder_vb_instance_applications", VisualBuilderVbInstanceApplicationsDataSource)
 }

@@ -6,7 +6,7 @@ package functions
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_functions_application", FunctionsApplicationResource())
-	tfresource.RegisterResource("oci_functions_function", FunctionsFunctionResource())
-	tfresource.RegisterResource("oci_functions_invoke_function", FunctionsInvokeFunctionResource())
+	tfresource.RegisterResource("oci_functions_application", FunctionsApplicationResource)
+	tfresource.RegisterResource("oci_functions_function", FunctionsFunctionResource)
+	tfresource.RegisterResource("oci_functions_invoke_function", FunctionsInvokeFunctionResource)
 }

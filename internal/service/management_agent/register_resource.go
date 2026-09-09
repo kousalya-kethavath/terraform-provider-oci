@@ -6,8 +6,8 @@ package management_agent
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_management_agent_management_agent", ManagementAgentManagementAgentResource())
-	tfresource.RegisterResource("oci_management_agent_management_agent_data_source", ManagementAgentManagementAgentDataSourceResource())
-	tfresource.RegisterResource("oci_management_agent_management_agent_install_key", ManagementAgentManagementAgentInstallKeyResource())
-	tfresource.RegisterResource("oci_management_agent_named_credential", ManagementAgentNamedCredentialResource())
+	tfresource.RegisterResource("oci_management_agent_management_agent", ManagementAgentManagementAgentResource)
+	tfresource.RegisterResource("oci_management_agent_management_agent_data_source", ManagementAgentManagementAgentDataSourceResource)
+	tfresource.RegisterResource("oci_management_agent_management_agent_install_key", ManagementAgentManagementAgentInstallKeyResource)
+	tfresource.RegisterResource("oci_management_agent_named_credential", ManagementAgentNamedCredentialResource)
 }

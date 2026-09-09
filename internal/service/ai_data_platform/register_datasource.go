@@ -6,6 +6,6 @@ package ai_data_platform
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_ai_data_platform_ai_data_platform", AiDataPlatformAiDataPlatformDataSource())
-	tfresource.RegisterDatasource("oci_ai_data_platform_ai_data_platforms", AiDataPlatformAiDataPlatformsDataSource())
+	tfresource.RegisterDatasource("oci_ai_data_platform_ai_data_platform", AiDataPlatformAiDataPlatformDataSource)
+	tfresource.RegisterDatasource("oci_ai_data_platform_ai_data_platforms", AiDataPlatformAiDataPlatformsDataSource)
 }

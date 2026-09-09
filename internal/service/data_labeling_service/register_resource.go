@@ -6,5 +6,5 @@ package data_labeling_service
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_data_labeling_service_dataset", DataLabelingServiceDatasetResource())
+	tfresource.RegisterResource("oci_data_labeling_service_dataset", DataLabelingServiceDatasetResource)
 }

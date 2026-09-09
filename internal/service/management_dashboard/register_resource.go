@@ -6,6 +6,6 @@ package management_dashboard
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_management_dashboard_management_dashboards_import", ManagementDashboardManagementDashboardsImportResource())
-	tfresource.RegisterResource("oci_management_dashboard_management_saved_search", ManagementDashboardManagementSavedSearchResource())
+	tfresource.RegisterResource("oci_management_dashboard_management_dashboards_import", ManagementDashboardManagementDashboardsImportResource)
+	tfresource.RegisterResource("oci_management_dashboard_management_saved_search", ManagementDashboardManagementSavedSearchResource)
 }

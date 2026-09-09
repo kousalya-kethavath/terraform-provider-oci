@@ -6,7 +6,7 @@ package apm
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_apm_apm_domain", ApmApmDomainDataSource())
-	tfresource.RegisterDatasource("oci_apm_apm_domains", ApmApmDomainsDataSource())
-	tfresource.RegisterDatasource("oci_apm_data_keys", ApmDataKeysDataSource())
+	tfresource.RegisterDatasource("oci_apm_apm_domain", ApmApmDomainDataSource)
+	tfresource.RegisterDatasource("oci_apm_apm_domains", ApmApmDomainsDataSource)
+	tfresource.RegisterDatasource("oci_apm_data_keys", ApmDataKeysDataSource)
 }

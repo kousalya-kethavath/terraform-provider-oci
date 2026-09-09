@@ -6,8 +6,8 @@ package container_instances
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_container_instances_container_instance", ContainerInstancesContainerInstanceDataSource())
-	tfresource.RegisterDatasource("oci_container_instances_container_instance_shape", ContainerInstancesContainerInstanceShapeDataSource())
-	tfresource.RegisterDatasource("oci_container_instances_container_instance_shapes", ContainerInstancesContainerInstanceShapesDataSource())
-	tfresource.RegisterDatasource("oci_container_instances_container_instances", ContainerInstancesContainerInstancesDataSource())
+	tfresource.RegisterDatasource("oci_container_instances_container_instance", ContainerInstancesContainerInstanceDataSource)
+	tfresource.RegisterDatasource("oci_container_instances_container_instance_shape", ContainerInstancesContainerInstanceShapeDataSource)
+	tfresource.RegisterDatasource("oci_container_instances_container_instance_shapes", ContainerInstancesContainerInstanceShapesDataSource)
+	tfresource.RegisterDatasource("oci_container_instances_container_instances", ContainerInstancesContainerInstancesDataSource)
 }

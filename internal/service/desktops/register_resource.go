@@ -6,5 +6,5 @@ package desktops
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_desktops_desktop_pool", DesktopsDesktopPoolResource())
+	tfresource.RegisterResource("oci_desktops_desktop_pool", DesktopsDesktopPoolResource)
 }

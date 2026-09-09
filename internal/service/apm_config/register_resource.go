@@ -6,6 +6,6 @@ package apm_config
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_apm_config_config", ApmConfigConfigResource())
-	tfresource.RegisterResource("oci_apm_config_data_file", ApmConfigDataFileResource())
+	tfresource.RegisterResource("oci_apm_config_config", ApmConfigConfigResource)
+	tfresource.RegisterResource("oci_apm_config_data_file", ApmConfigDataFileResource)
 }

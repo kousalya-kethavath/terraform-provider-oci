@@ -6,5 +6,5 @@ package ddfs
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_ddfs_instance", DdfsInstanceResource())
+	tfresource.RegisterResource("oci_ddfs_instance", DdfsInstanceResource)
 }

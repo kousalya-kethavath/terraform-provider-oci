@@ -6,6 +6,6 @@ package opa
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_opa_opa_instance", OpaOpaInstanceDataSource())
-	tfresource.RegisterDatasource("oci_opa_opa_instances", OpaOpaInstancesDataSource())
+	tfresource.RegisterDatasource("oci_opa_opa_instance", OpaOpaInstanceDataSource)
+	tfresource.RegisterDatasource("oci_opa_opa_instances", OpaOpaInstancesDataSource)
 }

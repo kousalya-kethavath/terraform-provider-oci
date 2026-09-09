@@ -6,6 +6,6 @@ package cluster_health
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_cluster_health_diagnosis_store", ClusterHealthDiagnosisStoreDataSource())
-	tfresource.RegisterDatasource("oci_cluster_health_diagnosis_stores", ClusterHealthDiagnosisStoresDataSource())
+	tfresource.RegisterDatasource("oci_cluster_health_diagnosis_store", ClusterHealthDiagnosisStoreDataSource)
+	tfresource.RegisterDatasource("oci_cluster_health_diagnosis_stores", ClusterHealthDiagnosisStoresDataSource)
 }
