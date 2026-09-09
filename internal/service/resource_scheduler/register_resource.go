@@ -6,5 +6,5 @@ package resource_scheduler
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_resource_scheduler_schedule", ResourceSchedulerScheduleResource())
+	tfresource.RegisterResource("oci_resource_scheduler_schedule", ResourceSchedulerScheduleResource)
 }

@@ -6,5 +6,5 @@ package psa
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_psa_private_service_access", PsaPrivateServiceAccessResource())
+	tfresource.RegisterResource("oci_psa_private_service_access", PsaPrivateServiceAccessResource)
 }

@@ -6,5 +6,5 @@ package events
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_events_rule", EventsRuleResource())
+	tfresource.RegisterResource("oci_events_rule", EventsRuleResource)
 }

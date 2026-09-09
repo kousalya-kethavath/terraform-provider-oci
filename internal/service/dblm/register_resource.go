@@ -6,5 +6,5 @@ package dblm
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_dblm_vulnerability_scan", DblmVulnerabilityScanResource())
+	tfresource.RegisterResource("oci_dblm_vulnerability_scan", DblmVulnerabilityScanResource)
 }

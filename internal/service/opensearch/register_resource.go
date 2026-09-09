@@ -6,6 +6,6 @@ package opensearch
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_opensearch_opensearch_cluster", OpensearchOpensearchClusterResource())
-	tfresource.RegisterResource("oci_opensearch_opensearch_cluster_pipeline", OpensearchOpensearchClusterPipelineResource())
+	tfresource.RegisterResource("oci_opensearch_opensearch_cluster", OpensearchOpensearchClusterResource)
+	tfresource.RegisterResource("oci_opensearch_opensearch_cluster_pipeline", OpensearchOpensearchClusterPipelineResource)
 }

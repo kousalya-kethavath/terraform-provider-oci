@@ -6,5 +6,5 @@ package autoscaling
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_autoscaling_auto_scaling_configuration", AutoScalingAutoScalingConfigurationResource())
+	tfresource.RegisterResource("oci_autoscaling_auto_scaling_configuration", AutoScalingAutoScalingConfigurationResource)
 }

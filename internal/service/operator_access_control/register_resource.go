@@ -6,6 +6,6 @@ package operator_access_control
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_operator_access_control_operator_control", OperatorAccessControlOperatorControlResource())
-	tfresource.RegisterResource("oci_operator_access_control_operator_control_assignment", OperatorAccessControlOperatorControlAssignmentResource())
+	tfresource.RegisterResource("oci_operator_access_control_operator_control", OperatorAccessControlOperatorControlResource)
+	tfresource.RegisterResource("oci_operator_access_control_operator_control_assignment", OperatorAccessControlOperatorControlAssignmentResource)
 }
