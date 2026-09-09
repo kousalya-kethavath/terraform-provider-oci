@@ -406,7 +406,7 @@ func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
 	}
 
 	clients := &tf_client.OracleClients{
-		SdkClientMap:  make(map[string]interface{}, len(tf_client.OracleClientRegistrationsVar.RegisteredClients)),
+		SdkClientMap:  make(map[string]interface{}),
 		Configuration: make(map[string]string),
 	}
 
@@ -446,7 +446,11 @@ func (p *ociPluginProvider) SetProviderConfig() (interface{}, error) {
 		return nil, err
 	}
 
-	err = tf_client.CreateSDKClients(clients, sdkConfigProvider, configureClient)
+	createSDKClients := tf_client.CreateSDKClients
+	if p.inProcess {
+		createSDKClients = tf_client.CreateSDKClientsLazy
+	}
+	err = createSDKClients(clients, sdkConfigProvider, configureClient)
 	if err != nil {
 		return nil, err
 	}
