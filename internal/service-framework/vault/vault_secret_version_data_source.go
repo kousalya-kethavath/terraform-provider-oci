@@ -28,14 +28,20 @@ func NewVaultSecretVersionDataSource() datasource.DataSource {
 }
 
 type VaultSecretVersionDataSource struct {
-	client *client.OracleClients
+	clients *client.OracleClients
 }
 
 func (d *VaultSecretVersionDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
 	log.Println("VaultSecretVersionDataSource providerData", request.ProviderData)
-	if request.ProviderData != nil {
-		d.client = request.ProviderData.(*client.OracleClients)
+	if request.ProviderData == nil {
+		return
 	}
+	clients, ok := request.ProviderData.(*client.OracleClients)
+	if !ok {
+		response.Diagnostics.AddError("Unexpected provider data type", fmt.Sprintf("Expected *client.OracleClients, got %T", request.ProviderData))
+		return
+	}
+	d.clients = clients
 }
 
 func (d *VaultSecretVersionDataSource) Metadata(ctx context.Context, request datasource.MetadataRequest, response *datasource.MetadataResponse) {
@@ -90,13 +96,27 @@ type VaultSecretVersionDataSourceCrud struct {
 }
 
 func (d *VaultSecretVersionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	if d.clients == nil {
+		resp.Diagnostics.AddError("OCI Vault client is not configured", "Configure the OCI provider before reading this data source.")
+		return
+	}
+	value, err := d.clients.GetClientWithError("oci_vault.VaultsClient")
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to initialize OCI Vault client", err.Error())
+		return
+	}
+	vaultClient, ok := value.(*oci_vault.VaultsClient)
+	if !ok {
+		resp.Diagnostics.AddError("Unexpected OCI Vault client type", fmt.Sprintf("Expected *vault.VaultsClient, got %T", value))
+		return
+	}
 	sync := &VaultSecretVersionDataSourceCrud{}
 	sync.Context = &ctx
 	sync.Request = &req
 	sync.Response = resp
-	sync.Client = d.client.VaultsClient()
+	sync.Client = vaultClient
 
-	err := tfresource.ReadResource(sync)
+	err = tfresource.ReadResource(sync)
 	if err != nil {
 		resp.Diagnostics.AddError(err.Error(), "")
 	}

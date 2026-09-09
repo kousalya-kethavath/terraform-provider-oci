@@ -82,16 +82,28 @@ var (
 	}
 	tfProviderBuildConfigureClientFn  = tf_provider.BuildConfigureClientFn
 	createSDKClientsVar               = tf_client.CreateSDKClients
-	identityClientListCompartmentsVar = func(clients *tf_client.OracleClients, req oci_identity.ListCompartmentsRequest) (oci_identity.ListCompartmentsResponse, error) {
-		return clients.IdentityClient().ListCompartments(context.Background(), req)
-	}
-	identityClientGetCompartmentVar = func(clients *tf_client.OracleClients, getCompartmentRequest oci_identity.GetCompartmentRequest) (oci_identity.GetCompartmentResponse, error) {
-		return clients.IdentityClient().GetCompartment(context.Background(), getCompartmentRequest)
-	}
-	ctxTerraformImportVar = func(ctx *tf_export.ResourceDiscoveryContext, ctxBackground context.Context, address, id string, importArgs ...tfexec.ImportOption) error {
+	identityClientListCompartmentsVar = listCompartments
+	identityClientGetCompartmentVar   = getCompartment
+	ctxTerraformImportVar             = func(ctx *tf_export.ResourceDiscoveryContext, ctxBackground context.Context, address, id string, importArgs ...tfexec.ImportOption) error {
 		return ctx.Terraform.Import(ctxBackground, address, id, importArgs...)
 	}
 )
+
+func listCompartments(clients *tf_client.OracleClients, req oci_identity.ListCompartmentsRequest) (oci_identity.ListCompartmentsResponse, error) {
+	value, err := clients.GetClientWithError("oci_identity.IdentityClient")
+	if err != nil {
+		return oci_identity.ListCompartmentsResponse{}, err
+	}
+	return value.(*oci_identity.IdentityClient).ListCompartments(context.Background(), req)
+}
+
+func getCompartment(clients *tf_client.OracleClients, req oci_identity.GetCompartmentRequest) (oci_identity.GetCompartmentResponse, error) {
+	value, err := clients.GetClientWithError("oci_identity.IdentityClient")
+	if err != nil {
+		return oci_identity.GetCompartmentResponse{}, err
+	}
+	return value.(*oci_identity.IdentityClient).GetCompartment(context.Background(), req)
+}
 
 func elapsed(what string, step *resourceDiscoveryBaseStep, stage ResourceDiscoveryStage) func() {
 	start := time.Now()
@@ -361,7 +373,7 @@ func getListOfNotDiscoveredResources(ctx *tf_export.ResourceDiscoveryContext) (e
 
 func getExportConfig(d *schema.ResourceData) (interface{}, error) {
 	clients := &tf_client.OracleClients{
-		SdkClientMap:  make(map[string]interface{}, len(tf_client.OracleClientRegistrationsVar.RegisteredClients)),
+		SdkClientMap:  make(map[string]interface{}),
 		Configuration: make(map[string]string),
 	}
 
