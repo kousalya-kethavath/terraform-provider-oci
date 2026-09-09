@@ -6,6 +6,6 @@ package autoscaling
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_autoscaling_auto_scaling_configuration", AutoScalingAutoScalingConfigurationDataSource())
-	tfresource.RegisterDatasource("oci_autoscaling_auto_scaling_configurations", AutoScalingAutoScalingConfigurationsDataSource())
+	tfresource.RegisterDatasource("oci_autoscaling_auto_scaling_configuration", AutoScalingAutoScalingConfigurationDataSource)
+	tfresource.RegisterDatasource("oci_autoscaling_auto_scaling_configurations", AutoScalingAutoScalingConfigurationsDataSource)
 }

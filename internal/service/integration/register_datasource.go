@@ -6,6 +6,6 @@ package integration
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_integration_integration_instance", IntegrationIntegrationInstanceDataSource())
-	tfresource.RegisterDatasource("oci_integration_integration_instances", IntegrationIntegrationInstancesDataSource())
+	tfresource.RegisterDatasource("oci_integration_integration_instance", IntegrationIntegrationInstanceDataSource)
+	tfresource.RegisterDatasource("oci_integration_integration_instances", IntegrationIntegrationInstancesDataSource)
 }

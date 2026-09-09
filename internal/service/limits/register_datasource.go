@@ -6,10 +6,10 @@ package limits
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterDatasource() {
-	tfresource.RegisterDatasource("oci_limits_limit_definitions", LimitsLimitDefinitionsDataSource())
-	tfresource.RegisterDatasource("oci_limits_limit_values", LimitsLimitValuesDataSource())
-	tfresource.RegisterDatasource("oci_limits_quota", LimitsQuotaDataSource())
-	tfresource.RegisterDatasource("oci_limits_quotas", LimitsQuotasDataSource())
-	tfresource.RegisterDatasource("oci_limits_resource_availability", LimitsResourceAvailabilityDataSource())
-	tfresource.RegisterDatasource("oci_limits_services", LimitsServicesDataSource())
+	tfresource.RegisterDatasource("oci_limits_limit_definitions", LimitsLimitDefinitionsDataSource)
+	tfresource.RegisterDatasource("oci_limits_limit_values", LimitsLimitValuesDataSource)
+	tfresource.RegisterDatasource("oci_limits_quota", LimitsQuotaDataSource)
+	tfresource.RegisterDatasource("oci_limits_quotas", LimitsQuotasDataSource)
+	tfresource.RegisterDatasource("oci_limits_resource_availability", LimitsResourceAvailabilityDataSource)
+	tfresource.RegisterDatasource("oci_limits_services", LimitsServicesDataSource)
 }

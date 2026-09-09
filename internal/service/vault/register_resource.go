@@ -6,5 +6,5 @@ package vault
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_vault_secret", VaultSecretResource())
+	tfresource.RegisterResource("oci_vault_secret", VaultSecretResource)
 }

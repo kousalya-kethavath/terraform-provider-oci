@@ -6,9 +6,9 @@ package apm_synthetics
 import "github.com/oracle/terraform-provider-oci/internal/tfresource"
 
 func RegisterResource() {
-	tfresource.RegisterResource("oci_apm_synthetics_dedicated_vantage_point", ApmSyntheticsDedicatedVantagePointResource())
-	tfresource.RegisterResource("oci_apm_synthetics_monitor", ApmSyntheticsMonitorResource())
-	tfresource.RegisterResource("oci_apm_synthetics_on_premise_vantage_point", ApmSyntheticsOnPremiseVantagePointResource())
-	tfresource.RegisterResource("oci_apm_synthetics_on_premise_vantage_point_worker", ApmSyntheticsOnPremiseVantagePointWorkerResource())
-	tfresource.RegisterResource("oci_apm_synthetics_script", ApmSyntheticsScriptResource())
+	tfresource.RegisterResource("oci_apm_synthetics_dedicated_vantage_point", ApmSyntheticsDedicatedVantagePointResource)
+	tfresource.RegisterResource("oci_apm_synthetics_monitor", ApmSyntheticsMonitorResource)
+	tfresource.RegisterResource("oci_apm_synthetics_on_premise_vantage_point", ApmSyntheticsOnPremiseVantagePointResource)
+	tfresource.RegisterResource("oci_apm_synthetics_on_premise_vantage_point_worker", ApmSyntheticsOnPremiseVantagePointWorkerResource)
+	tfresource.RegisterResource("oci_apm_synthetics_script", ApmSyntheticsScriptResource)
 }
