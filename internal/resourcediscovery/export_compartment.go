@@ -179,8 +179,7 @@ func printResourceGraphResources(resourceGraphs map[string]tf_export.TerraformRe
 }
 
 func RunListExportableResourcesCommand() error {
-	tf_export.ResourcesMap = tf_provider.ResourcesMap()
-	tf_export.DatasourcesMap = tf_provider.DataSourcesMap()
+	refreshProviderSchemaMaps()
 
 	utils.Logln("List of Discoverable Oracle Cloud Infrastructure Resources")
 
@@ -248,8 +247,7 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 			status = StatusFail
 		}
 	}()
-	tf_export.ResourcesMap = tf_provider.ResourcesMap()
-	tf_export.DatasourcesMap = tf_provider.DataSourcesMap()
+	refreshProviderSchemaMaps()
 
 	if err := args.Validate(); err != nil {
 		return err, StatusFail
@@ -354,6 +352,27 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 		return error, status
 	}
 	return nil, StatusSuccess
+}
+
+// refreshProviderSchemaMaps rebuilds the provider's generated schemas while
+// preserving entries registered only by Resource Discovery. Provider-generated
+// entries from an earlier refresh must not replace the fresh schema instances.
+func refreshProviderSchemaMaps() {
+	resources := tf_provider.ResourcesMap()
+	preserveDiscoveryOnlySchemas(resources, tf_export.ResourcesMap)
+	tf_export.ResourcesMap = resources
+
+	datasources := tf_provider.DataSourcesMap()
+	preserveDiscoveryOnlySchemas(datasources, tf_export.DatasourcesMap)
+	tf_export.DatasourcesMap = datasources
+}
+
+func preserveDiscoveryOnlySchemas(providerSchemas, existingSchemas map[string]*schema.Resource) {
+	for name, resourceSchema := range existingSchemas {
+		if _, providerOwned := providerSchemas[name]; !providerOwned {
+			providerSchemas[name] = resourceSchema
+		}
+	}
 }
 
 func getListOfNotDiscoveredResources(ctx *tf_export.ResourceDiscoveryContext) (error, Status) {
