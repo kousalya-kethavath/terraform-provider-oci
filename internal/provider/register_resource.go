@@ -149,7 +149,9 @@ import (
 	tf_zpr "github.com/oracle/terraform-provider-oci/internal/service/zpr"
 )
 
-func init() {
+// registerResourcesEagerly preserves the Terraform CLI registration path.
+// In-process consumers use the separately generated lazy factory registry.
+func registerResourcesEagerly() {
 	if common.CheckForEnabledServices("adm") {
 		tf_adm.RegisterResource()
 	}

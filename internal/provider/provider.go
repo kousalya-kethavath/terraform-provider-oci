@@ -13,11 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
-
-	tf_core "github.com/oracle/terraform-provider-oci/internal/service/core"
-	tf_load_balancer "github.com/oracle/terraform-provider-oci/internal/service/load_balancer"
 
 	"github.com/oracle/terraform-provider-oci/internal/globalvar"
 
@@ -44,7 +40,7 @@ var descriptions map[string]string
 var ApiKeyConfigAttributes = [5]string{globalvar.UserOcidAttrName, globalvar.FingerprintAttrName, globalvar.PrivateKeyAttrName, globalvar.PrivateKeyPathAttrName, globalvar.PrivateKeyPasswordAttrName}
 var TerraformCLIVersion = globalvar.UnknownTerraformCLIVersion
 var schemaMultiEnvDefaultFuncVar = schema.MultiEnvDefaultFunc
-var providerAliasesOnce sync.Once
+var AvoidWaitingForDeleteTarget bool
 
 // creating an interface to aid in unit tests
 type schemaResourceData interface {
@@ -132,14 +128,37 @@ func NewSDKv2ProviderForInProcess() *schema.Provider {
 	return newSDKv2Provider(true)
 }
 
-func newSDKv2Provider(inProcess bool) *schema.Provider {
-	dataSources := DataSourcesMap()
-	resources := ResourcesMap()
-	if inProcess {
-		dataSources = cloneSDKv2ResourceMap(dataSources)
-		resources = cloneSDKv2ResourceMap(resources)
+// NewSDKv2ProviderForInProcessResources returns a fresh in-process SDKv2
+// provider containing only the requested resource schemas and no data-source
+// schemas.
+func NewSDKv2ProviderForInProcessResources(resourceNames ...string) (*schema.Provider, error) {
+	resources, err := buildSelectedInProcessSDKv2Schemas(inProcessResourceFactories(), resourceNames...)
+	if err != nil {
+		return nil, err
 	}
+	return newSDKv2ProviderWithMaps(true, resources, nil), nil
+}
 
+// NewSDKv2ProviderForInProcessConfiguration returns a fresh in-process SDKv2
+// provider with provider configuration schema but without resource or
+// data-source schemas.
+func NewSDKv2ProviderForInProcessConfiguration() *schema.Provider {
+	return newSDKv2ProviderWithMaps(true, nil, nil)
+}
+
+func newSDKv2Provider(inProcess bool) *schema.Provider {
+	if inProcess {
+		return newSDKv2ProviderWithMaps(
+			true,
+			buildInProcessSDKv2Schemas(inProcessResourceFactories()),
+			buildInProcessSDKv2Schemas(inProcessDatasourceFactories()),
+		)
+	}
+	resources, dataSources := terraformCLISchemaMaps()
+	return newSDKv2ProviderWithMaps(false, resources, dataSources)
+}
+
+func newSDKv2ProviderWithMaps(inProcess bool, resources, dataSources map[string]*schema.Resource) *schema.Provider {
 	p := &schema.Provider{
 		DataSourcesMap: dataSources,
 		Schema:         SchemaMap(),
@@ -316,38 +335,14 @@ func SchemaMap() map[string]*schema.Schema {
 	}
 }
 
-// This returns a map of all data sources to register with Terraform
-// The OciDatasources map is populated by each datasource's init function being invoked before it gets here
+// DataSourcesMap returns all data sources registered for the Terraform CLI.
 func DataSourcesMap() map[string]*schema.Resource {
-	registerProviderAliases()
-	return globalvar.OciDatasources
+	return terraformCLIDataSourceSchemas()
 }
 
-// This returns a map of all resources to register with Terraform
-// The OciResource map is populated by each resource's init function being invoked before it gets here
+// ResourcesMap returns all resources registered for the Terraform CLI.
 func ResourcesMap() map[string]*schema.Resource {
-	registerProviderAliases()
-	return globalvar.OciResources
-}
-
-func registerProviderAliases() {
-	providerAliasesOnce.Do(func() {
-		// Register aliases once. Provider construction may be concurrent when
-		// the provider is embedded in another Go process.
-		if oci_common.CheckForEnabledServices(globalvar.CoreService) {
-			tf_resource.RegisterDatasource("oci_core_listing_resource_version", tf_core.CoreAppCatalogListingResourceVersionDataSource())
-			tf_resource.RegisterDatasource("oci_core_listing_resource_versions", tf_core.CoreAppCatalogListingResourceVersionsDataSource())
-			tf_resource.RegisterDatasource("oci_core_shape", tf_core.CoreShapesDataSource())
-			tf_resource.RegisterDatasource("oci_core_virtual_networks", tf_core.CoreVcnsDataSource())
-			tf_resource.RegisterResource("oci_core_virtual_network", tf_core.CoreVcnResource())
-		}
-		if oci_common.CheckForEnabledServices(globalvar.LoadBalancerService) {
-			tf_resource.RegisterDatasource("oci_load_balancers", tf_load_balancer.LoadBalancerLoadBalancersDataSource())
-			tf_resource.RegisterDatasource("oci_load_balancer_backendsets", tf_load_balancer.LoadBalancerBackendSetsDataSource())
-			tf_resource.RegisterResource("oci_load_balancer", tf_load_balancer.LoadBalancerLoadBalancerResource())
-			tf_resource.RegisterResource("oci_load_balancer_backendset", tf_load_balancer.LoadBalancerBackendSetResource())
-		}
-	})
+	return terraformCLIResourceSchemas()
 }
 
 func ProviderConfig(d *schema.ResourceData) (interface{}, error) {
@@ -362,13 +357,17 @@ func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess b
 	} else if err := setSDKv2TerraformCLIProcessGlobals(d); err != nil {
 		return nil, err
 	}
-
+	sdkClientCapacity := len(tf_client.OracleClientRegistrationsVar.RegisteredClients)
+	if inProcess {
+		// In-process clients are initialized lazily; reserve space only as used.
+		sdkClientCapacity = 0
+	}
 	clients := &tf_client.OracleClients{
-		SdkClientMap:  make(map[string]interface{}, len(tf_client.OracleClientRegistrationsVar.RegisteredClients)),
+		SdkClientMap:  make(map[string]interface{}, sdkClientCapacity),
 		Configuration: make(map[string]string),
 	}
 
-	sdkConfigProvider, err := GetSdkConfigProvider(d, clients)
+	sdkConfigProvider, err := getSdkConfigProvider(d, clients, inProcess)
 	if err != nil {
 		return nil, err
 	}
@@ -380,10 +379,15 @@ func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess b
 		return nil, err
 	}
 
-	err = tf_client.CreateSDKClients(clients, sdkConfigProvider, configureClient)
+	createSDKClients := tf_client.CreateSDKClients
+	if inProcess {
+		createSDKClients = tf_client.CreateSDKClientsLazy
+	}
+	err = createSDKClients(clients, sdkConfigProvider, configureClient)
 	if err != nil {
 		return nil, err
 	}
+	setAvoidWaitingForDeleteTargetFromEnv(inProcess)
 
 	return clients, nil
 }
@@ -417,6 +421,13 @@ func setSDKv2TerraformCLIProcessGlobals(d *schema.ResourceData) error {
 	return nil
 }
 
+func setAvoidWaitingForDeleteTargetFromEnv(inProcess bool) {
+	if inProcess {
+		return
+	}
+	AvoidWaitingForDeleteTarget, _ = strconv.ParseBool(utils.GetEnvSettingWithDefault("avoid_waiting_for_delete_target", "false"))
+}
+
 func validateInProcessProviderConfig(d *schema.ResourceData) error {
 	unsupported := make([]string, 0, 6)
 	if len(IgnoreDefinedTags(d)) != 0 {
@@ -444,12 +455,16 @@ func validateInProcessProviderConfig(d *schema.ResourceData) error {
 }
 
 func GetSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClients) (oci_common.ConfigurationProvider, error) {
+	return getSdkConfigProvider(d, clients, false)
+}
+
+func getSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClients, inProcess bool) (oci_common.ConfigurationProvider, error) {
 
 	auth := strings.ToLower(d.Get(globalvar.AuthAttrName).(string))
 	profile := d.Get(globalvar.ConfigFileProfileAttrName).(string)
 	clients.Configuration[globalvar.AuthAttrName] = auth
 
-	configProviders, err := getConfigProviders(d, auth)
+	configProviders, err := getConfigProvidersForMode(d, auth, inProcess)
 	if err != nil {
 		return nil, err
 	}
@@ -463,7 +478,13 @@ func GetSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClien
 	//Then SDK will based on the AuthType to Create the actual provider if it's a valid value.
 	//If not, then SDK will base on the order in the composite provider list to check for necessary info (tenancyid, userID, fingerprint, region, keyID).
 	configProviders = append(configProviders, resourceDataConfigProvider)
-	if profile == "" {
+	if inProcess && usesInProcessFileConfiguration(auth) {
+		fileProviders, err := inProcessFileConfigurationProviders(profile)
+		if err != nil && profile != "" {
+			return nil, err
+		}
+		configProviders = append(configProviders, fileProviders...)
+	} else if profile == "" {
 		configProviders = append(configProviders, oci_common.DefaultConfigProvider())
 	} else {
 		defaultPath := path.Join(utils.GetHomeFolder(), globalvar.DefaultConfigDirName, globalvar.DefaultConfigFileName)
@@ -482,6 +503,10 @@ func GetSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClien
 }
 
 func getConfigProviders(d *schema.ResourceData, auth string) ([]oci_common.ConfigurationProvider, error) {
+	return getConfigProvidersForMode(d, auth, false)
+}
+
+func getConfigProvidersForMode(d *schema.ResourceData, auth string, inProcess bool) ([]oci_common.ConfigurationProvider, error) {
 	var configProviders []oci_common.ConfigurationProvider
 
 	switch auth {
@@ -576,9 +601,15 @@ func getConfigProviders(d *schema.ResourceData, auth string) ([]oci_common.Confi
 		if err := utils.CheckProfile(profileString, defaultPath); err != nil {
 			return nil, err
 		}
-		securityTokenBasedAuthConfigProvider, err := oci_common.ConfigurationProviderForSessionTokenWithProfile(defaultPath, profileString, privateKeyPasswordString)
+		var securityTokenBasedAuthConfigProvider oci_common.ConfigurationProvider
+		var err error
+		if inProcess {
+			securityTokenBasedAuthConfigProvider, err = loadSessionTokenCredentialSnapshot(defaultPath, profileString, privateKeyPasswordString)
+		} else {
+			securityTokenBasedAuthConfigProvider, err = oci_common.ConfigurationProviderForSessionTokenWithProfile(defaultPath, profileString, privateKeyPasswordString)
+		}
 		if err != nil {
-			return nil, fmt.Errorf("could not create security token based auth config provider %v", err)
+			return nil, fmt.Errorf("could not create security token based auth config provider: %w", err)
 		}
 		configProviders = append(configProviders, securityTokenBasedAuthConfigProvider)
 	case strings.ToLower(globalvar.ResourcePrincipal):
@@ -801,6 +832,10 @@ func buildConfigureClientFn(configProvider oci_common.ConfigurationProvider, htt
 
 	OpcDryRun, _ := strconv.ParseBool(utils.GetEnvSettingWithDefault("opc_dry_run", "false"))
 
+	if err := prepareHTTPClient(httpClient); err != nil {
+		return nil, err
+	}
+
 	requestSigner := oci_common.DefaultRequestSigner(configProvider)
 	var oboTokenProvider OboTokenProvider
 	oboTokenProvider = emptyOboTokenProvider{}
@@ -880,37 +915,53 @@ func buildConfigureClientFn(configProvider oci_common.ConfigurationProvider, htt
 			}
 		}
 
-		customCertLoc := utils.GetEnvSettingWithBlankDefault(globalvar.CustomCertLocationEnv)
-
-		if customCertLoc != "" {
-			cert, err := ioutil.ReadFile(customCertLoc)
-			if err != nil {
-				return err
-			}
-			pool := x509.NewCertPool()
-			if ok := pool.AppendCertsFromPEM(cert); !ok {
-				return fmt.Errorf("failed to append custom cert to the pool")
-			}
-			// install the certificates in the client
-			httpClient.Transport.(*http.Transport).TLSClientConfig.RootCAs = pool
-		}
-
-		if acceptLocalCerts := utils.GetEnvSettingWithBlankDefault(globalvar.AcceptLocalCerts); acceptLocalCerts != "" {
-			if bool, err := strconv.ParseBool(acceptLocalCerts); err == nil {
-				httpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = bool
-			}
-		}
-
-		// install the hook for HTTP replaying
-		if h, ok := client.HTTPClient.(*http.Client); ok {
-			_, err := httpreplay.InstallRecorder(h)
-			if err != nil {
-				return err
-			}
-		}
-
 		return nil
 	}
 
 	return configureClientFn, nil
+}
+
+// prepareHTTPClient applies provider-wide transport settings before the client
+// is shared by eager and lazy SDK clients. A tls.Config must not be modified
+// after it has been used for a TLS connection.
+func prepareHTTPClient(httpClient *http.Client) error {
+	if customCertLoc := utils.GetEnvSettingWithBlankDefault(globalvar.CustomCertLocationEnv); customCertLoc != "" {
+		cert, err := ioutil.ReadFile(customCertLoc)
+		if err != nil {
+			return err
+		}
+		pool := x509.NewCertPool()
+		if ok := pool.AppendCertsFromPEM(cert); !ok {
+			return fmt.Errorf("failed to append custom cert to the pool")
+		}
+		tlsConfig, err := httpClientTLSConfig(httpClient)
+		if err != nil {
+			return err
+		}
+		tlsConfig.RootCAs = pool
+	}
+
+	if acceptLocalCerts := utils.GetEnvSettingWithBlankDefault(globalvar.AcceptLocalCerts); acceptLocalCerts != "" {
+		if allowLocalCerts, err := strconv.ParseBool(acceptLocalCerts); err == nil {
+			tlsConfig, err := httpClientTLSConfig(httpClient)
+			if err != nil {
+				return err
+			}
+			tlsConfig.InsecureSkipVerify = allowLocalCerts
+		}
+	}
+
+	_, err := httpreplay.InstallRecorder(httpClient)
+	return err
+}
+
+func httpClientTLSConfig(httpClient *http.Client) (*tls.Config, error) {
+	if httpClient == nil {
+		return nil, fmt.Errorf("cannot configure TLS on a nil HTTP client")
+	}
+	transport, ok := httpClient.Transport.(*http.Transport)
+	if !ok || transport.TLSClientConfig == nil {
+		return nil, fmt.Errorf("cannot configure TLS on HTTP transport %T", httpClient.Transport)
+	}
+	return transport.TLSClientConfig, nil
 }

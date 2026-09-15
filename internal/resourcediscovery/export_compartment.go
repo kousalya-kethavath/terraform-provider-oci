@@ -82,16 +82,37 @@ var (
 	}
 	tfProviderBuildConfigureClientFn  = tf_provider.BuildConfigureClientFn
 	createSDKClientsVar               = tf_client.CreateSDKClients
-	identityClientListCompartmentsVar = func(clients *tf_client.OracleClients, req oci_identity.ListCompartmentsRequest) (oci_identity.ListCompartmentsResponse, error) {
-		return clients.IdentityClient().ListCompartments(context.Background(), req)
-	}
-	identityClientGetCompartmentVar = func(clients *tf_client.OracleClients, getCompartmentRequest oci_identity.GetCompartmentRequest) (oci_identity.GetCompartmentResponse, error) {
-		return clients.IdentityClient().GetCompartment(context.Background(), getCompartmentRequest)
-	}
-	ctxTerraformImportVar = func(ctx *tf_export.ResourceDiscoveryContext, ctxBackground context.Context, address, id string, importArgs ...tfexec.ImportOption) error {
+	identityClientListCompartmentsVar = listCompartments
+	identityClientGetCompartmentVar   = getCompartment
+	identityClientGetTenancyVar       = getTenancy
+	ctxTerraformImportVar             = func(ctx *tf_export.ResourceDiscoveryContext, ctxBackground context.Context, address, id string, importArgs ...tfexec.ImportOption) error {
 		return ctx.Terraform.Import(ctxBackground, address, id, importArgs...)
 	}
 )
+
+func listCompartments(clients *tf_client.OracleClients, req oci_identity.ListCompartmentsRequest) (oci_identity.ListCompartmentsResponse, error) {
+	value, err := clients.GetClientWithError("oci_identity.IdentityClient")
+	if err != nil {
+		return oci_identity.ListCompartmentsResponse{}, err
+	}
+	return value.(*oci_identity.IdentityClient).ListCompartments(context.Background(), req)
+}
+
+func getCompartment(clients *tf_client.OracleClients, req oci_identity.GetCompartmentRequest) (oci_identity.GetCompartmentResponse, error) {
+	value, err := clients.GetClientWithError("oci_identity.IdentityClient")
+	if err != nil {
+		return oci_identity.GetCompartmentResponse{}, err
+	}
+	return value.(*oci_identity.IdentityClient).GetCompartment(context.Background(), req)
+}
+
+func getTenancy(clients *tf_client.OracleClients, req oci_identity.GetTenancyRequest) (oci_identity.GetTenancyResponse, error) {
+	value, err := clients.GetClientWithError("oci_identity.IdentityClient")
+	if err != nil {
+		return oci_identity.GetTenancyResponse{}, err
+	}
+	return value.(*oci_identity.IdentityClient).GetTenancy(context.Background(), req)
+}
 
 func elapsed(what string, step *resourceDiscoveryBaseStep, stage ResourceDiscoveryStage) func() {
 	start := time.Now()
@@ -167,8 +188,7 @@ func printResourceGraphResources(resourceGraphs map[string]tf_export.TerraformRe
 }
 
 func RunListExportableResourcesCommand() error {
-	tf_export.ResourcesMap = tf_provider.ResourcesMap()
-	tf_export.DatasourcesMap = tf_provider.DataSourcesMap()
+	refreshProviderSchemaMaps()
 
 	utils.Logln("List of Discoverable Oracle Cloud Infrastructure Resources")
 
@@ -236,8 +256,7 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 			status = StatusFail
 		}
 	}()
-	tf_export.ResourcesMap = tf_provider.ResourcesMap()
-	tf_export.DatasourcesMap = tf_provider.DataSourcesMap()
+	refreshProviderSchemaMaps()
 
 	if err := args.Validate(); err != nil {
 		return err, StatusFail
@@ -342,6 +361,27 @@ func RunExportCommand(args *tf_export.ExportCommandArgs) (err error, status Stat
 		return error, status
 	}
 	return nil, StatusSuccess
+}
+
+// refreshProviderSchemaMaps rebuilds the provider's generated schemas while
+// preserving entries registered only by Resource Discovery. Provider-generated
+// entries from an earlier refresh must not replace the fresh schema instances.
+func refreshProviderSchemaMaps() {
+	resources := tf_provider.ResourcesMap()
+	preserveDiscoveryOnlySchemas(resources, tf_export.ResourcesMap)
+	tf_export.ResourcesMap = resources
+
+	datasources := tf_provider.DataSourcesMap()
+	preserveDiscoveryOnlySchemas(datasources, tf_export.DatasourcesMap)
+	tf_export.DatasourcesMap = datasources
+}
+
+func preserveDiscoveryOnlySchemas(providerSchemas, existingSchemas map[string]*schema.Resource) {
+	for name, resourceSchema := range existingSchemas {
+		if _, providerOwned := providerSchemas[name]; !providerOwned {
+			providerSchemas[name] = resourceSchema
+		}
+	}
 }
 
 func getListOfNotDiscoveredResources(ctx *tf_export.ResourceDiscoveryContext) (error, Status) {

@@ -4,12 +4,18 @@
 package provider
 
 import (
+	"context"
+	"maps"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	frameworktypes "github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	oci_common "github.com/oracle/oci-go-sdk/v65/common"
+	tfclient "github.com/oracle/terraform-provider-oci/internal/client"
 	"github.com/oracle/terraform-provider-oci/internal/globalvar"
 )
 
@@ -28,25 +34,121 @@ func TestUnitProviderConstructorsReturnFreshInstances(t *testing.T) {
 	assertSDKv2ResourceMapsIsolated(t, firstEmbedded.DataSourcesMap, secondEmbedded.DataSourcesMap)
 }
 
-func TestSDKv2ProviderSchemaOwnership(t *testing.T) {
-	cli := Provider()
-	embedded := NewSDKv2ProviderForInProcess()
-
+func TestUnitSelectiveInProcessProvider(t *testing.T) {
 	const resourceName = "oci_identity_tag_namespace"
-	if cli.ResourcesMap[resourceName] != globalvar.OciResources[resourceName] {
-		t.Fatalf("CLI provider does not use the registered %q schema", resourceName)
+	enabledServices := maps.Clone(oci_common.OciSdkEnabledServicesMap)
+	first, err := NewSDKv2ProviderForInProcessResources(resourceName, resourceName)
+	if err != nil {
+		t.Fatalf("construct selective provider: %v", err)
 	}
-	if embedded.ResourcesMap[resourceName] == globalvar.OciResources[resourceName] {
-		t.Fatalf("in-process provider shares the registered %q schema", resourceName)
+	second, err := NewSDKv2ProviderForInProcessResources(resourceName)
+	if err != nil {
+		t.Fatalf("construct second selective provider: %v", err)
+	}
+	if len(first.ResourcesMap) != 1 || first.ResourcesMap[resourceName] == nil {
+		t.Fatalf("selective resource map = %v, want only %q", first.ResourcesMap, resourceName)
+	}
+	if len(first.DataSourcesMap) != 0 {
+		t.Fatalf("selective provider retained %d data sources, want 0", len(first.DataSourcesMap))
+	}
+	if err := first.InternalValidate(); err != nil {
+		t.Fatalf("selective provider validation failed: %v", err)
+	}
+	if first.ResourcesMap[resourceName] == second.ResourcesMap[resourceName] {
+		t.Fatal("selective providers share a mutable resource schema")
 	}
 
-	const dataSourceName = "oci_identity_availability_domains"
-	if cli.DataSourcesMap[dataSourceName] != globalvar.OciDatasources[dataSourceName] {
-		t.Fatalf("CLI provider does not use the registered %q schema", dataSourceName)
+	if _, err := NewSDKv2ProviderForInProcessResources("oci_missing_resource"); err == nil {
+		t.Fatal("selective provider accepted an unknown resource")
 	}
-	if embedded.DataSourcesMap[dataSourceName] == globalvar.OciDatasources[dataSourceName] {
-		t.Fatalf("in-process provider shares the registered %q schema", dataSourceName)
+	if !maps.Equal(enabledServices, oci_common.OciSdkEnabledServicesMap) {
+		t.Fatal("selective schema construction changed OCI SDK enabled services")
 	}
+}
+
+func TestUnitConfigurationOnlyInProcessProvider(t *testing.T) {
+	p := NewSDKv2ProviderForInProcessConfiguration()
+	if len(p.Schema) == 0 {
+		t.Fatal("configuration-only provider has no provider schema")
+	}
+	if p.ConfigureFunc == nil {
+		t.Fatal("configuration-only provider has no ConfigureFunc")
+	}
+	if len(p.ResourcesMap) != 0 || len(p.DataSourcesMap) != 0 {
+		t.Fatalf("configuration-only provider retained resources=%d dataSources=%d", len(p.ResourcesMap), len(p.DataSourcesMap))
+	}
+	if err := p.InternalValidate(); err != nil {
+		t.Fatalf("configuration-only provider validation failed: %v", err)
+	}
+}
+
+func TestUnitTerraformCLISchemaMapsRebuildOnlyRequestedInventory(t *testing.T) {
+	ResourcesMap()
+	resource := globalvar.OciResources["oci_identity_tag_namespace"]
+	if resource == nil {
+		t.Fatal("resource registration did not include oci_identity_tag_namespace")
+	}
+	DataSourcesMap()
+	if globalvar.OciResources["oci_identity_tag_namespace"] != resource {
+		t.Fatal("DataSourcesMap rebuilt the Terraform CLI resource inventory")
+	}
+
+	dataSource := globalvar.OciDatasources["oci_identity_regions"]
+	if dataSource == nil {
+		t.Fatal("data-source registration did not include oci_identity_regions")
+	}
+	ResourcesMap()
+	if globalvar.OciDatasources["oci_identity_regions"] != dataSource {
+		t.Fatal("ResourcesMap rebuilt the Terraform CLI data-source inventory")
+	}
+}
+
+func TestUnitClonedSDKv2ResourceReturnsLazyClientInitializationErrors(t *testing.T) {
+	resource := cloneSDKv2Resource(&schema.Resource{
+		Importer: &schema.ResourceImporter{
+			StateContext: func(_ context.Context, _ *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				meta.(*tfclient.OracleClients).GetClient("oci_missing.Client")
+				return nil, nil
+			},
+		},
+		Create: func(_ *schema.ResourceData, meta interface{}) error {
+			meta.(*tfclient.OracleClients).GetClient("oci_missing.Client")
+			return nil
+		},
+		ReadContext: func(_ context.Context, _ *schema.ResourceData, meta interface{}) diag.Diagnostics {
+			meta.(*tfclient.OracleClients).GetClient("oci_missing.Client")
+			return nil
+		},
+	})
+	clients := &tfclient.OracleClients{SdkClientMap: make(map[string]interface{})}
+
+	err := resource.Create(nil, clients)
+	if err == nil || !strings.Contains(err.Error(), "provider clients are not configured") {
+		t.Fatalf("Create lazy-client error = %v", err)
+	}
+	diagnostics := resource.ReadContext(t.Context(), nil, clients)
+	if !diagnostics.HasError() || !strings.Contains(diagnostics[0].Summary, "provider clients are not configured") {
+		t.Fatalf("ReadContext lazy-client diagnostics = %v", diagnostics)
+	}
+	_, err = resource.Importer.StateContext(t.Context(), nil, clients)
+	if err == nil || !strings.Contains(err.Error(), "provider clients are not configured") {
+		t.Fatalf("import lazy-client error = %v", err)
+	}
+}
+
+func TestUnitClonedSDKv2ResourceDoesNotMaskUnrelatedPanics(t *testing.T) {
+	resource := cloneSDKv2Resource(&schema.Resource{
+		Create: func(*schema.ResourceData, interface{}) error {
+			panic("programming error")
+		},
+	})
+
+	defer func() {
+		if recovered := recover(); recovered != "programming error" {
+			t.Fatalf("recovered panic = %v", recovered)
+		}
+	}()
+	_ = resource.Create(nil, nil)
 }
 
 func assertSDKv2ResourceMapsIsolated(t *testing.T, first, second map[string]*schema.Resource) {
@@ -342,6 +444,39 @@ func TestUnitFrameworkInProcessProviderRejectsRetryOptions(t *testing.T) {
 	}
 }
 
+func TestUnitSetAvoidWaitingForDeleteTargetFromEnv(t *testing.T) {
+	original := AvoidWaitingForDeleteTarget
+	t.Cleanup(func() {
+		AvoidWaitingForDeleteTarget = original
+	})
+
+	tests := []struct {
+		name      string
+		inProcess bool
+		want      bool
+	}{
+		{
+			name: "Terraform CLI",
+			want: true,
+		},
+		{
+			name:      "in-process",
+			inProcess: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("avoid_waiting_for_delete_target", "true")
+			AvoidWaitingForDeleteTarget = false
+			setAvoidWaitingForDeleteTargetFromEnv(tt.inProcess)
+			if AvoidWaitingForDeleteTarget != tt.want {
+				t.Fatalf("AvoidWaitingForDeleteTarget = %t, want %t", AvoidWaitingForDeleteTarget, tt.want)
+			}
+		})
+	}
+}
+
 func TestUnitInternalAndEmbeddedSDKv2SchemasRemainCompatible(t *testing.T) {
 	cli := Provider()
 	embedded := NewSDKv2ProviderForInProcess()
@@ -349,9 +484,61 @@ func TestUnitInternalAndEmbeddedSDKv2SchemasRemainCompatible(t *testing.T) {
 		t.Fatalf("provider schema size differs: CLI=%d embedded=%d", len(cli.Schema), len(embedded.Schema))
 	}
 	if len(cli.ResourcesMap) != len(embedded.ResourcesMap) {
-		t.Fatalf("resource schema size differs: CLI=%d embedded=%d", len(cli.ResourcesMap), len(embedded.ResourcesMap))
+		t.Fatalf("resource schema size differs: CLI=%d embedded=%d; missing=%v extra=%v", len(cli.ResourcesMap), len(embedded.ResourcesMap), missingSchemaNames(cli.ResourcesMap, embedded.ResourcesMap), missingSchemaNames(embedded.ResourcesMap, cli.ResourcesMap))
 	}
 	if len(cli.DataSourcesMap) != len(embedded.DataSourcesMap) {
-		t.Fatalf("data-source schema size differs: CLI=%d embedded=%d", len(cli.DataSourcesMap), len(embedded.DataSourcesMap))
+		t.Fatalf("data-source schema size differs: CLI=%d embedded=%d; missing=%v extra=%v", len(cli.DataSourcesMap), len(embedded.DataSourcesMap), missingSchemaNames(cli.DataSourcesMap, embedded.DataSourcesMap), missingSchemaNames(embedded.DataSourcesMap, cli.DataSourcesMap))
 	}
+	for name, cliResource := range cli.ResourcesMap {
+		embeddedResource, exists := embedded.ResourcesMap[name]
+		if !exists {
+			t.Fatalf("CLI resource %q is absent from the embedded inventory", name)
+		}
+		if cliResource == embeddedResource {
+			t.Fatalf("CLI and embedded resource %q share a mutable schema", name)
+		}
+	}
+	for name, cliDatasource := range cli.DataSourcesMap {
+		embeddedDatasource, exists := embedded.DataSourcesMap[name]
+		if !exists {
+			t.Fatalf("CLI data source %q is absent from the embedded inventory", name)
+		}
+		if cliDatasource == embeddedDatasource {
+			t.Fatalf("CLI and embedded data source %q share a mutable schema", name)
+		}
+	}
+}
+
+func missingSchemaNames(want, got map[string]*schema.Resource) []string {
+	missing := make([]string, 0)
+	for name := range want {
+		if _, ok := got[name]; !ok {
+			missing = append(missing, name)
+		}
+	}
+	slices.Sort(missing)
+	return missing
+}
+
+func BenchmarkInProcessProviderConstruction(b *testing.B) {
+	b.Run("full", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = NewSDKv2ProviderForInProcess()
+		}
+	})
+	b.Run("identity-resource", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			if _, err := NewSDKv2ProviderForInProcessResources("oci_identity_tag_namespace"); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("configuration-only", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = NewSDKv2ProviderForInProcessConfiguration()
+		}
+	})
 }
