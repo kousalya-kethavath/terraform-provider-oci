@@ -43,3 +43,19 @@ func New() frameworkprovider.Provider {
 func InProcessFileCredentialFingerprint(config map[string]any) (string, error) {
 	return internalprovider.InProcessFileCredentialFingerprint(config)
 }
+
+// InProcessOptions supplies dependencies to one embedded provider instance.
+// Token providers must be safe for concurrent use and renew short-lived tokens.
+type InProcessOptions = internalprovider.InProcessOptions
+
+// ProviderForConfigurationWithOptions constructs an isolated SDKv2 provider with
+// optional authentication dependencies. The zero value preserves default auth.
+func ProviderForConfigurationWithOptions(options InProcessOptions) *schema.Provider {
+	return internalprovider.NewSDKv2ProviderForInProcessConfigurationWithOptions(options)
+}
+
+// NewWithOptions constructs an isolated Framework provider with optional
+// authentication dependencies. The zero value preserves default authentication.
+func NewWithOptions(options InProcessOptions) frameworkprovider.Provider {
+	return internalprovider.NewFrameworkProviderForInProcessWithOptions(options)
+}

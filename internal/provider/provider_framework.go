@@ -30,6 +30,7 @@ import (
 )
 
 type ociPluginProvider struct {
+	inProcessOptions                            InProcessOptions
 	inProcess                                   bool
 	terraformVersion                            string
 	configured                                  bool
@@ -507,6 +508,11 @@ func (p *ociPluginProvider) _GetSdkConfigProvider(clients *tf_client.OracleClien
 	if region, error := configProvider.Region(); error == nil {
 		clients.Configuration["region"] = region
 	}
+	if p.inProcessOptions.OKEWorkloadIdentityTokenProvider != nil {
+		// A selected tenant identity is exclusive: do not compose ambient
+		// credentials into this authentication path.
+		return configProviders[0], nil
+	}
 
 	//In GoSDK, the first step is to check if AuthType exists,
 	//for composite provider, we only check the first provider in the list for the AuthType.
@@ -560,6 +566,9 @@ func (p *ociPluginProvider) CheckIncompatibleAttrsForApiKeyAuthFw() ([]string, b
 }
 
 func (p *ociPluginProvider) _getConfigProviders() ([]oci_common.ConfigurationProvider, error) {
+	if err := p.inProcessOptions.validate(p.auth); err != nil {
+		return nil, err
+	}
 	var configProviders []oci_common.ConfigurationProvider
 
 	auth := strings.ToLower(p.auth)
@@ -682,7 +691,7 @@ func (p *ociPluginProvider) _getConfigProviders() ([]oci_common.ConfigurationPro
 		}
 		configProviders = append(configProviders, resourcePrincipalAuthConfigProvider)
 	case strings.ToLower(globalvar.AuthOKEWorkloadIdentity):
-		okeWorkloadIdentityConfigProvider, err := oci_common_auth.OkeWorkloadIdentityConfigurationProvider()
+		okeWorkloadIdentityConfigProvider, err := p.inProcessOptions.okeConfigurationProvider(p.region)
 		if err != nil {
 			return nil, fmt.Errorf("can not get oke workload indentity based auth config provider %v", err)
 		}
