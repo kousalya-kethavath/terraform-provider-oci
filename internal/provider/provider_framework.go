@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -244,6 +245,17 @@ func (p *ociPluginProvider) Configure(ctx context.Context, req provider.Configur
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// An unknown file path is an explicitly selected, unresolved credential
+	// source. Do not turn it into an empty string and use the pod's identity.
+	if config.OKEWorkloadIdentityTokenPath.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root(globalvar.OKEWorkloadIdentityTokenPathAttrName),
+			"Unknown OKE token file path",
+			"oke_workload_identity_token_path must be known before configuring the OCI provider",
+		)
 		return
 	}
 

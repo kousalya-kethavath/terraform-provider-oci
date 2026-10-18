@@ -540,7 +540,11 @@ func getConfigProviders(d *schema.ResourceData, auth string) ([]oci_common.Confi
 }
 
 func getConfigProvidersForMode(d *schema.ResourceData, auth string, inProcess bool, options ...InProcessOptions) ([]oci_common.ConfigurationProvider, error) {
-	optionsForInstance, err := firstInProcessOptions(options).withOKETokenPath(auth, getStringFromResourceData(d, globalvar.OKEWorkloadIdentityTokenPathAttrName))
+	tokenPath, err := okeTokenPathFromResourceData(d)
+	if err != nil {
+		return nil, err
+	}
+	optionsForInstance, err := firstInProcessOptions(options).withOKETokenPath(auth, tokenPath)
 	if err != nil {
 		return nil, err
 	}

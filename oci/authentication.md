@@ -60,9 +60,11 @@ provider "oci" {
 }
 ```
 
-The path must be absolute. A host such as Crossplane obtains the selected
-ServiceAccount JWT and atomically replaces this file before expiry. The provider
-reopens it whenever the OCI SDK needs a JWT; it does not request Kubernetes tokens
+The path must be absolute and known when the provider is configured. An unknown
+path produces a configuration error; it never selects the pod identity. A host
+such as Crossplane obtains the selected ServiceAccount JWT and atomically replaces
+this file before expiry. The provider reopens it whenever the OCI SDK needs a JWT;
+it does not request Kubernetes tokens
 or write to the file. Empty, missing and oversized files fail closed. Configure
 neither a file nor a callback to retain the existing pod-token behavior; setting
 both is an error. This OKE-specific option does not change the existing non-OKE

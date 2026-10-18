@@ -10,8 +10,23 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/oracle/terraform-provider-oci/internal/globalvar"
 )
+
+// SDKv2 string accessors collapse unknown configuration to an empty string.
+// Check protocol values first so an unresolved file cannot select pod identity.
+func okeTokenPathFromResourceData(d *schema.ResourceData) (string, error) {
+	raw := d.GetRawConfig()
+	if raw != cty.NilVal && !raw.IsNull() && raw.Type().HasAttribute(globalvar.OKEWorkloadIdentityTokenPathAttrName) {
+		if !raw.GetAttr(globalvar.OKEWorkloadIdentityTokenPathAttrName).IsKnown() {
+			return "", fmt.Errorf("oke_workload_identity_token_path must be known before configuring the OCI provider")
+		}
+	}
+	return getStringFromResourceData(d, globalvar.OKEWorkloadIdentityTokenPathAttrName), nil
+}
 
 // withOKETokenPath selects one explicit token source for this configuration.
 // CLI callers rotate the file; embedded callers may supply a Go callback.

@@ -40,6 +40,9 @@ provider "oci" {
 }
 ```
 
+The path must be known when the provider is configured. Unknown values produce
+a configuration error instead of selecting the pod identity.
+
 The token producer owns token acquisition and rotation. The provider reopens the
 file whenever the OCI SDK needs a JWT, and errors if it cannot read a nonempty
 file. OKE Enhanced cluster, normal OKE runtime environment and matching workload
