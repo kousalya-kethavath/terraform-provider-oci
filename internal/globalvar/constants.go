@@ -50,6 +50,7 @@ const (
 	PrivateKeyPathAttrName                      = "private_key_path"
 	PrivateKeyPasswordAttrName                  = "private_key_password"
 	RegionAttrName                              = "region"
+	OKEWorkloadIdentityTokenPathAttrName        = "oke_workload_identity_token_path"
 	WorkloadIdentityTokenPathAttrName           = "workload_identity_token_path"
 	TokenExchangeDomainUrlAttrName              = "token_exchange_domain_url"
 	TokenExchangeAuthAttrName                   = "token_exchange_auth"

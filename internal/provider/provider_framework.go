@@ -42,6 +42,7 @@ type ociPluginProvider struct {
 	privateKeyPath                              string
 	privateKeyPassword                          string
 	region                                      string
+	okeWorkloadIdentityTokenPath                string
 	workloadIdentityTokenPath                   string
 	tokenExchangeDomainURL                      string
 	tokenExchangeAuth                           string
@@ -71,6 +72,7 @@ type ociProviderModel struct {
 	PrivateKeyPath                              types.String `tfsdk:"private_key_path"`
 	PrivateKeyPassword                          types.String `tfsdk:"private_key_password"`
 	Region                                      types.String `tfsdk:"region"`
+	OKEWorkloadIdentityTokenPath                types.String `tfsdk:"oke_workload_identity_token_path"`
 	WorkloadIdentityTokenPath                   types.String `tfsdk:"workload_identity_token_path"`
 	TokenExchangeDomainURL                      types.String `tfsdk:"token_exchange_domain_url"`
 	TokenExchangeAuth                           types.String `tfsdk:"token_exchange_auth"`
@@ -146,6 +148,9 @@ func (p *ociPluginProvider) Schema(ctx context.Context, req provider.SchemaReque
 			globalvar.RegionAttrName: schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions[globalvar.RegionAttrName],
+			},
+			globalvar.OKEWorkloadIdentityTokenPathAttrName: schema.StringAttribute{
+				Optional: true, Description: descriptions[globalvar.OKEWorkloadIdentityTokenPathAttrName],
 			},
 			globalvar.WorkloadIdentityTokenPathAttrName: schema.StringAttribute{
 				Optional:    true,
@@ -367,6 +372,7 @@ func (p *ociPluginProvider) SetDefaults(config *ociProviderModel) {
 	p.privateKeyPath = config.PrivateKeyPath.ValueString()
 	p.privateKeyPassword = config.PrivateKeyPassword.ValueString()
 	p.region = config.Region.ValueString()
+	p.okeWorkloadIdentityTokenPath = config.OKEWorkloadIdentityTokenPath.ValueString()
 	p.workloadIdentityTokenPath = config.WorkloadIdentityTokenPath.ValueString()
 	p.tokenExchangeDomainURL = config.TokenExchangeDomainURL.ValueString()
 	p.tokenExchangeAuth = config.TokenExchangeAuth.ValueString()
@@ -508,7 +514,7 @@ func (p *ociPluginProvider) _GetSdkConfigProvider(clients *tf_client.OracleClien
 	if region, error := configProvider.Region(); error == nil {
 		clients.Configuration["region"] = region
 	}
-	if p.inProcessOptions.OKEWorkloadIdentityTokenProvider != nil {
+	if p.inProcessOptions.OKEWorkloadIdentityTokenProvider != nil || p.okeWorkloadIdentityTokenPath != "" {
 		// A selected tenant identity is exclusive: do not compose ambient
 		// credentials into this authentication path.
 		return configProviders[0], nil
@@ -566,7 +572,8 @@ func (p *ociPluginProvider) CheckIncompatibleAttrsForApiKeyAuthFw() ([]string, b
 }
 
 func (p *ociPluginProvider) _getConfigProviders() ([]oci_common.ConfigurationProvider, error) {
-	if err := p.inProcessOptions.validate(p.auth); err != nil {
+	optionsForInstance, err := p.inProcessOptions.withOKETokenPath(p.auth, p.okeWorkloadIdentityTokenPath)
+	if err != nil {
 		return nil, err
 	}
 	var configProviders []oci_common.ConfigurationProvider
@@ -691,7 +698,7 @@ func (p *ociPluginProvider) _getConfigProviders() ([]oci_common.ConfigurationPro
 		}
 		configProviders = append(configProviders, resourcePrincipalAuthConfigProvider)
 	case strings.ToLower(globalvar.AuthOKEWorkloadIdentity):
-		okeWorkloadIdentityConfigProvider, err := p.inProcessOptions.okeConfigurationProvider(p.region)
+		okeWorkloadIdentityConfigProvider, err := optionsForInstance.okeConfigurationProvider(p.region)
 		if err != nil {
 			return nil, fmt.Errorf("can not get oke workload indentity based auth config provider %v", err)
 		}

@@ -20,7 +20,8 @@ import (
 // into the Terraform configuration or shared through process-wide settings.
 type InProcessOptions struct {
 	// OKEWorkloadIdentityTokenProvider supplies renewable tokens for this
-	// provider instance only. A nil interface retains the default pod identity.
+	// provider instance only. With nil, provider configuration selects an
+	// explicit token file or retains the default pod identity.
 	OKEWorkloadIdentityTokenProvider auth.ServiceAccountTokenProvider
 }
 

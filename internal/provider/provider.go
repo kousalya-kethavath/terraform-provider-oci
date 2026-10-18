@@ -93,6 +93,7 @@ func init() {
 		globalvar.UserOcidAttrName:                        fmt.Sprintf("(Optional) The user OCID. This can be found in user settings in the Oracle Cloud Infrastructure console. Required if auth is set to '%s', ignored otherwise.", globalvar.AuthAPIKeySetting),
 		globalvar.FingerprintAttrName:                     fmt.Sprintf("(Optional) The fingerprint for the user's RSA key. This can be found in user settings in the Oracle Cloud Infrastructure console. Required if auth is set to '%s', ignored otherwise.", globalvar.AuthAPIKeySetting),
 		globalvar.RegionAttrName:                          "(Required) The region for API connections (e.g. us-ashburn-1).",
+		globalvar.OKEWorkloadIdentityTokenPathAttrName:    "(Optional) Absolute path to a renewable ServiceAccount JWT file for OKEWorkloadIdentity. The token producer must rotate this file before expiration.",
 		globalvar.WorkloadIdentityTokenPathAttrName:       fmt.Sprintf("(Optional) Path to the projected Kubernetes service account token. Required if auth is set to '%s', ignored otherwise.", globalvar.AuthWorkloadIdentityFederation),
 		globalvar.TokenExchangeDomainUrlAttrName:          fmt.Sprintf("(Optional) OCI IAM identity domain URL for token exchange. Required if auth is set to '%s', ignored otherwise.", globalvar.AuthWorkloadIdentityFederation),
 		globalvar.TokenExchangeAuthAttrName:               fmt.Sprintf("(Optional) Authentication method for the token-exchange client. Valid values are '%s' and '%s'. Used only if auth is set to '%s'. Defaults to '%s'.", globalvar.WorkloadIdentityTokenExchangeAuthOAuthClient, globalvar.WorkloadIdentityTokenExchangeAuthInstancePrincipal, globalvar.AuthWorkloadIdentityFederation, globalvar.WorkloadIdentityTokenExchangeAuthOAuthClient),
@@ -225,6 +226,10 @@ func SchemaMap() map[string]*schema.Schema {
 			Optional:    true,
 			Description: descriptions[globalvar.RegionAttrName],
 			DefaultFunc: schema.MultiEnvDefaultFunc([]string{tfVarName(globalvar.RegionAttrName), ociVarName(globalvar.RegionAttrName)}, nil),
+		},
+		globalvar.OKEWorkloadIdentityTokenPathAttrName: {
+			Type: schema.TypeString, Optional: true,
+			Description: descriptions[globalvar.OKEWorkloadIdentityTokenPathAttrName],
 		},
 		globalvar.WorkloadIdentityTokenPathAttrName: {
 			Type:        schema.TypeString,
@@ -495,7 +500,7 @@ func getSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClien
 	if region, error := resourceDataConfigProvider.Region(); error == nil {
 		clients.Configuration["region"] = region
 	}
-	if firstInProcessOptions(options).OKEWorkloadIdentityTokenProvider != nil {
+	if firstInProcessOptions(options).OKEWorkloadIdentityTokenProvider != nil || getStringFromResourceData(d, globalvar.OKEWorkloadIdentityTokenPathAttrName) != "" {
 		// Explicit tenant identity must never fall back to config-file or
 		// environment credentials if its token exchange fails.
 		return configProviders[0], nil
@@ -535,8 +540,8 @@ func getConfigProviders(d *schema.ResourceData, auth string) ([]oci_common.Confi
 }
 
 func getConfigProvidersForMode(d *schema.ResourceData, auth string, inProcess bool, options ...InProcessOptions) ([]oci_common.ConfigurationProvider, error) {
-	optionsForInstance := firstInProcessOptions(options)
-	if err := optionsForInstance.validate(auth); err != nil {
+	optionsForInstance, err := firstInProcessOptions(options).withOKETokenPath(auth, getStringFromResourceData(d, globalvar.OKEWorkloadIdentityTokenPathAttrName))
+	if err != nil {
 		return nil, err
 	}
 	var configProviders []oci_common.ConfigurationProvider

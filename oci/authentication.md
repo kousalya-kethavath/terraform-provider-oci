@@ -46,3 +46,30 @@ available until resource deletion and asynchronous operations complete.
 This extension does not request Kubernetes tokens or grant tenant access by
 itself. Live Enhanced OKE exchange, tenant IAM denial tests, and renewal across
 both Kubernetes and OCI credential lifetimes must be validated by the host.
+
+## Terraform CLI token files
+
+The normal SDKv2 and Plugin Framework providers also accept an explicit token
+file. This does not require in-process execution:
+
+```hcl
+provider "oci" {
+  auth                             = "OKEWorkloadIdentity"
+  region                           = "us-ashburn-1"
+  oke_workload_identity_token_path = "/run/oci/tenant-a.jwt"
+}
+```
+
+The path must be absolute. A host such as Crossplane obtains the selected
+ServiceAccount JWT and atomically replaces this file before expiry. The provider
+reopens it whenever the OCI SDK needs a JWT; it does not request Kubernetes tokens
+or write to the file. Empty, missing and oversized files fail closed. Configure
+neither a file nor a callback to retain the existing pod-token behavior; setting
+both is an error. This OKE-specific option does not change the existing non-OKE
+`workload_identity_token_path` federation option. The standard OKE runtime
+requirements still apply.
+
+Only the path is provider configuration. Do not embed the JWT in HCL. Use private
+file permissions and avoid shared tenant volumes. The SDK caches and renews OCI
+credentials independently from the host's JWT rotation. A rotated file alone is
+not proof of RPST renewal; test both credential lifetimes.
