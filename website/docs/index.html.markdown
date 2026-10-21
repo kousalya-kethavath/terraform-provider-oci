@@ -26,30 +26,6 @@ For details on configuring the OCI Terraform provider and using it with the Terr
 
 As you write your configuration files, use the left navigation panel on this page to access detailed information about each supported resource and data source.
 
-## OKE workload identity with an explicit token file
-
-For `auth = "OKEWorkloadIdentity"`, the optional
-`oke_workload_identity_token_path` selects an absolute path to a renewable
-Kubernetes ServiceAccount JWT instead of the provider pod's default token:
-
-```hcl
-provider "oci" {
-  auth                             = "OKEWorkloadIdentity"
-  region                           = "us-ashburn-1"
-  oke_workload_identity_token_path = "/run/oci/tenant-a.jwt"
-}
-```
-
-The path must be known when the provider is configured. Unknown values produce
-a configuration error instead of selecting the pod identity.
-
-The token producer owns token acquisition and rotation. The provider reopens the
-file whenever the OCI SDK needs a JWT, and errors if it cannot read a nonempty
-file. OKE Enhanced cluster, normal OKE runtime environment and matching workload
-IAM policies are required. An explicit token source never falls back to ambient
-credentials. Omitting this field preserves default pod-token authentication.
-This option is separate from non-OKE workload identity federation settings.
-
 ## Resource Manager
 
 The Oracle Cloud Infrastructure [Resource Manager](https://docs.oracle.com/en-us/iaas/Content/ResourceManager/Concepts/landing.htm#ResourceManager) is an Oracle-managed service that is based on Terraform and uses Terraform configuration files to automate deployment and operations for the OCI resources supported by the OCI Terraform provider.
