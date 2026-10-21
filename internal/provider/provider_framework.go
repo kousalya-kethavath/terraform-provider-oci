@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -30,6 +31,7 @@ import (
 )
 
 type ociPluginProvider struct {
+	inProcessOptions                            InProcessOptions
 	inProcess                                   bool
 	terraformVersion                            string
 	configured                                  bool
@@ -41,6 +43,7 @@ type ociPluginProvider struct {
 	privateKeyPath                              string
 	privateKeyPassword                          string
 	region                                      string
+	okeWorkloadIdentityTokenPath                string
 	workloadIdentityTokenPath                   string
 	tokenExchangeDomainURL                      string
 	tokenExchangeAuth                           string
@@ -70,6 +73,7 @@ type ociProviderModel struct {
 	PrivateKeyPath                              types.String `tfsdk:"private_key_path"`
 	PrivateKeyPassword                          types.String `tfsdk:"private_key_password"`
 	Region                                      types.String `tfsdk:"region"`
+	OKEWorkloadIdentityTokenPath                types.String `tfsdk:"oke_workload_identity_token_path"`
 	WorkloadIdentityTokenPath                   types.String `tfsdk:"workload_identity_token_path"`
 	TokenExchangeDomainURL                      types.String `tfsdk:"token_exchange_domain_url"`
 	TokenExchangeAuth                           types.String `tfsdk:"token_exchange_auth"`
@@ -145,6 +149,9 @@ func (p *ociPluginProvider) Schema(ctx context.Context, req provider.SchemaReque
 			globalvar.RegionAttrName: schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions[globalvar.RegionAttrName],
+			},
+			globalvar.OKEWorkloadIdentityTokenPathAttrName: schema.StringAttribute{
+				Optional: true, Description: descriptions[globalvar.OKEWorkloadIdentityTokenPathAttrName],
 			},
 			globalvar.WorkloadIdentityTokenPathAttrName: schema.StringAttribute{
 				Optional:    true,
@@ -238,6 +245,17 @@ func (p *ociPluginProvider) Configure(ctx context.Context, req provider.Configur
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// An unknown file path is an explicitly selected, unresolved credential
+	// source. Do not turn it into an empty string and use the pod's identity.
+	if config.OKEWorkloadIdentityTokenPath.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root(globalvar.OKEWorkloadIdentityTokenPathAttrName),
+			"Unknown OKE token file path",
+			"oke_workload_identity_token_path must be known before configuring the OCI provider",
+		)
 		return
 	}
 
@@ -366,6 +384,7 @@ func (p *ociPluginProvider) SetDefaults(config *ociProviderModel) {
 	p.privateKeyPath = config.PrivateKeyPath.ValueString()
 	p.privateKeyPassword = config.PrivateKeyPassword.ValueString()
 	p.region = config.Region.ValueString()
+	p.okeWorkloadIdentityTokenPath = config.OKEWorkloadIdentityTokenPath.ValueString()
 	p.workloadIdentityTokenPath = config.WorkloadIdentityTokenPath.ValueString()
 	p.tokenExchangeDomainURL = config.TokenExchangeDomainURL.ValueString()
 	p.tokenExchangeAuth = config.TokenExchangeAuth.ValueString()
@@ -507,6 +526,11 @@ func (p *ociPluginProvider) _GetSdkConfigProvider(clients *tf_client.OracleClien
 	if region, error := configProvider.Region(); error == nil {
 		clients.Configuration["region"] = region
 	}
+	if p.inProcessOptions.OKEWorkloadIdentityTokenProvider != nil || p.okeWorkloadIdentityTokenPath != "" {
+		// A selected tenant identity is exclusive: do not compose ambient
+		// credentials into this authentication path.
+		return configProviders[0], nil
+	}
 
 	//In GoSDK, the first step is to check if AuthType exists,
 	//for composite provider, we only check the first provider in the list for the AuthType.
@@ -560,6 +584,10 @@ func (p *ociPluginProvider) CheckIncompatibleAttrsForApiKeyAuthFw() ([]string, b
 }
 
 func (p *ociPluginProvider) _getConfigProviders() ([]oci_common.ConfigurationProvider, error) {
+	optionsForInstance, err := p.inProcessOptions.withOKETokenPath(p.auth, p.okeWorkloadIdentityTokenPath)
+	if err != nil {
+		return nil, err
+	}
 	var configProviders []oci_common.ConfigurationProvider
 
 	auth := strings.ToLower(p.auth)
@@ -682,7 +710,7 @@ func (p *ociPluginProvider) _getConfigProviders() ([]oci_common.ConfigurationPro
 		}
 		configProviders = append(configProviders, resourcePrincipalAuthConfigProvider)
 	case strings.ToLower(globalvar.AuthOKEWorkloadIdentity):
-		okeWorkloadIdentityConfigProvider, err := oci_common_auth.OkeWorkloadIdentityConfigurationProvider()
+		okeWorkloadIdentityConfigProvider, err := optionsForInstance.okeConfigurationProvider(p.region)
 		if err != nil {
 			return nil, fmt.Errorf("can not get oke workload indentity based auth config provider %v", err)
 		}

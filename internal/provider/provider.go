@@ -93,6 +93,7 @@ func init() {
 		globalvar.UserOcidAttrName:                        fmt.Sprintf("(Optional) The user OCID. This can be found in user settings in the Oracle Cloud Infrastructure console. Required if auth is set to '%s', ignored otherwise.", globalvar.AuthAPIKeySetting),
 		globalvar.FingerprintAttrName:                     fmt.Sprintf("(Optional) The fingerprint for the user's RSA key. This can be found in user settings in the Oracle Cloud Infrastructure console. Required if auth is set to '%s', ignored otherwise.", globalvar.AuthAPIKeySetting),
 		globalvar.RegionAttrName:                          "(Required) The region for API connections (e.g. us-ashburn-1).",
+		globalvar.OKEWorkloadIdentityTokenPathAttrName:    "(Optional) Absolute path to a renewable ServiceAccount JWT file for OKEWorkloadIdentity. The token producer must rotate this file before expiration.",
 		globalvar.WorkloadIdentityTokenPathAttrName:       fmt.Sprintf("(Optional) Path to the projected Kubernetes service account token. Required if auth is set to '%s', ignored otherwise.", globalvar.AuthWorkloadIdentityFederation),
 		globalvar.TokenExchangeDomainUrlAttrName:          fmt.Sprintf("(Optional) OCI IAM identity domain URL for token exchange. Required if auth is set to '%s', ignored otherwise.", globalvar.AuthWorkloadIdentityFederation),
 		globalvar.TokenExchangeAuthAttrName:               fmt.Sprintf("(Optional) Authentication method for the token-exchange client. Valid values are '%s' and '%s'. Used only if auth is set to '%s'. Defaults to '%s'.", globalvar.WorkloadIdentityTokenExchangeAuthOAuthClient, globalvar.WorkloadIdentityTokenExchangeAuthInstancePrincipal, globalvar.AuthWorkloadIdentityFederation, globalvar.WorkloadIdentityTokenExchangeAuthOAuthClient),
@@ -160,14 +161,14 @@ func newSDKv2Provider(inProcess bool) *schema.Provider {
 	return newSDKv2ProviderWithMaps(inProcess, resources, dataSources)
 }
 
-func newSDKv2ProviderWithMaps(inProcess bool, resources, dataSources map[string]*schema.Resource) *schema.Provider {
+func newSDKv2ProviderWithMaps(inProcess bool, resources, dataSources map[string]*schema.Resource, options ...InProcessOptions) *schema.Provider {
 	p := &schema.Provider{
 		DataSourcesMap: dataSources,
 		Schema:         SchemaMap(),
 		ResourcesMap:   resources,
 	}
 	p.ConfigureFunc = func(d *schema.ResourceData) (any, error) {
-		return providerConfig(d, p.TerraformVersion, inProcess)
+		return providerConfig(d, p.TerraformVersion, inProcess, options...)
 	}
 	return p
 }
@@ -225,6 +226,10 @@ func SchemaMap() map[string]*schema.Schema {
 			Optional:    true,
 			Description: descriptions[globalvar.RegionAttrName],
 			DefaultFunc: schema.MultiEnvDefaultFunc([]string{tfVarName(globalvar.RegionAttrName), ociVarName(globalvar.RegionAttrName)}, nil),
+		},
+		globalvar.OKEWorkloadIdentityTokenPathAttrName: {
+			Type: schema.TypeString, Optional: true,
+			Description: descriptions[globalvar.OKEWorkloadIdentityTokenPathAttrName],
 		},
 		globalvar.WorkloadIdentityTokenPathAttrName: {
 			Type:        schema.TypeString,
@@ -372,7 +377,7 @@ func ProviderConfig(d *schema.ResourceData) (interface{}, error) {
 	return providerConfig(d, TerraformCLIVersion, false)
 }
 
-func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess bool) (any, error) {
+func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess bool, options ...InProcessOptions) (any, error) {
 	if inProcess {
 		if err := validateInProcessProviderConfig(d); err != nil {
 			return nil, err
@@ -390,7 +395,7 @@ func providerConfig(d *schema.ResourceData, terraformVersion string, inProcess b
 		Configuration: make(map[string]string),
 	}
 
-	sdkConfigProvider, err := getSdkConfigProvider(d, clients, inProcess)
+	sdkConfigProvider, err := getSdkConfigProvider(d, clients, inProcess, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -481,19 +486,24 @@ func GetSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClien
 	return getSdkConfigProvider(d, clients, false)
 }
 
-func getSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClients, inProcess bool) (oci_common.ConfigurationProvider, error) {
+func getSdkConfigProvider(d *schema.ResourceData, clients *tf_client.OracleClients, inProcess bool, options ...InProcessOptions) (oci_common.ConfigurationProvider, error) {
 
 	auth := strings.ToLower(d.Get(globalvar.AuthAttrName).(string))
 	profile := d.Get(globalvar.ConfigFileProfileAttrName).(string)
 	clients.Configuration[globalvar.AuthAttrName] = auth
 
-	configProviders, err := getConfigProvidersForMode(d, auth, inProcess)
+	configProviders, err := getConfigProvidersForMode(d, auth, inProcess, options...)
 	if err != nil {
 		return nil, err
 	}
 	resourceDataConfigProvider := ResourceDataConfigProvider{d}
 	if region, error := resourceDataConfigProvider.Region(); error == nil {
 		clients.Configuration["region"] = region
+	}
+	if firstInProcessOptions(options).OKEWorkloadIdentityTokenProvider != nil || getStringFromResourceData(d, globalvar.OKEWorkloadIdentityTokenPathAttrName) != "" {
+		// Explicit tenant identity must never fall back to config-file or
+		// environment credentials if its token exchange fails.
+		return configProviders[0], nil
 	}
 
 	//In GoSDK, the first step is to check if AuthType exists,
@@ -529,7 +539,15 @@ func getConfigProviders(d *schema.ResourceData, auth string) ([]oci_common.Confi
 	return getConfigProvidersForMode(d, auth, false)
 }
 
-func getConfigProvidersForMode(d *schema.ResourceData, auth string, inProcess bool) ([]oci_common.ConfigurationProvider, error) {
+func getConfigProvidersForMode(d *schema.ResourceData, auth string, inProcess bool, options ...InProcessOptions) ([]oci_common.ConfigurationProvider, error) {
+	tokenPath, err := okeTokenPathFromResourceData(d)
+	if err != nil {
+		return nil, err
+	}
+	optionsForInstance, err := firstInProcessOptions(options).withOKETokenPath(auth, tokenPath)
+	if err != nil {
+		return nil, err
+	}
 	var configProviders []oci_common.ConfigurationProvider
 
 	switch auth {
@@ -650,7 +668,7 @@ func getConfigProvidersForMode(d *schema.ResourceData, auth string, inProcess bo
 		}
 		configProviders = append(configProviders, resourcePrincipalAuthConfigProvider)
 	case strings.ToLower(globalvar.AuthOKEWorkloadIdentity):
-		okeWorkloadIdentityConfigProvider, err := oci_common_auth.OkeWorkloadIdentityConfigurationProvider()
+		okeWorkloadIdentityConfigProvider, err := optionsForInstance.okeConfigurationProvider(getStringFromResourceData(d, globalvar.RegionAttrName))
 		if err != nil {
 			return nil, fmt.Errorf("can not get oke workload indentity based auth config provider %v", err)
 		}
